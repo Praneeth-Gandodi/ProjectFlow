@@ -4,7 +4,7 @@ import type { Link as LinkType } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ExternalLink, MoreVertical, Edit2, Trash2, Link as LinkIcon } from 'lucide-react';
+import { ExternalLink, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import Image from 'next/image';
 
 interface LinkCardProps {
   link: LinkType;
@@ -25,12 +26,21 @@ interface LinkCardProps {
 
 export function LinkCard({ link, onEdit, onDelete }: LinkCardProps) {
     const displayUrl = link.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
+    const faviconUrl = `https://www.google.com/s2/favicons?sz=32&domain_url=${link.url}`;
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline text-lg flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <LinkIcon size={16} />
+            <Image 
+              src={faviconUrl}
+              alt={`${link.title} favicon`}
+              width={16}
+              height={16}
+              className="object-contain"
+            />
             {link.title}
           </span>
           <DropdownMenu>
