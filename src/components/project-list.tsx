@@ -17,7 +17,7 @@ interface ProjectListProps {
   setCompleted: React.Dispatch<React.SetStateAction<Project[]>>;
 }
 
-export function ProjectList({ title, projects, setProjects, allProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
+export function ProjectList({ title, projects, setProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'project',
         drop: (item: { id: string, source: 'ideas' | 'completed' }) => {

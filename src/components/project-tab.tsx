@@ -19,7 +19,7 @@ interface ProjectTabProps {
   title: string;
 }
 
-export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allIdeas, allCompleted, isCompletedTab, title }: ProjectTabProps) {
+export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allProjects, allIdeas, allCompleted, isCompletedTab, title }: ProjectTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<(Project & { source: 'ideas' | 'completed' }) | null>(null);
 
@@ -42,14 +42,16 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     if (!projectToMove) return;
 
     const newSource = sourceList.filter(p => p.id !== id);
-    const newTarget = [...(to === 'ideas' ? allIdeas : allCompleted), projectToMove];
-
-    if (from === 'ideas') {
-      setIdeas(newSource);
-      setCompleted(newTarget);
+    let newTarget;
+    
+    if (to === 'ideas') {
+        newTarget = [...allIdeas, { ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }];
+        setIdeas(newTarget);
+        setCompleted(newSource);
     } else {
-      setIdeas(newTarget);
-      setCompleted(newSource);
+        newTarget = [...allCompleted, { ...projectToMove, progress: 100 }];
+        setIdeas(newSource);
+        setCompleted(newTarget);
     }
   };
 
