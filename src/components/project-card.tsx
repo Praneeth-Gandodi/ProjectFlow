@@ -63,8 +63,7 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
             <GripVertical size={20} />
           </div>
             <Card className="group/card w-full h-full flex flex-col">
-              <Link href={`/project/${project.id}`} passHref legacyBehavior>
-                <a target="_blank" className='contents'>
+              <Link href={`/project/${project.id}`} target="_blank" className='contents'>
                   <CardHeader className="pl-10 pr-4">
                     <div className="flex items-start gap-4">
                       <Image
@@ -80,7 +79,6 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
                       </div>
                     </div>
                   </CardHeader>
-                </a>
               </Link>
 
               <CardContent className="pl-10 space-y-4 flex-grow">
