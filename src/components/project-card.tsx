@@ -4,9 +4,11 @@ import type { Project } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle, ExternalLink, Link as LinkIcon, Tag } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import { useDrag, useDrop } from 'react-dnd';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -34,6 +36,8 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpdateProject, onMarkAsCompleted }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [localProgress, setLocalProgress] = useState(project.progress);
   
   const [{ isDragging }, drag, preview] = useDrag(() => ({
     type: 'project',
@@ -54,16 +58,25 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
 
   drag(drop(ref));
 
+  useEffect(() => {
+    setLocalProgress(project.progress);
+  }, [project.progress]);
+
+  const handleSliderCommit = (value: number[]) => {
+    const newProgress = value[0];
+    onUpdateProject({ ...project, progress: newProgress });
+  };
+  
   const logoSrc = project.logo || `https://picsum.photos/seed/${project.id}/64/64`;
 
   return (
     <div ref={preview} style={{ opacity: isDragging ? 0.5 : 1 }}>
-        <div ref={ref} className="relative transition-shadow hover:shadow-lg rounded-lg">
+        <div ref={ref} className="relative transition-shadow hover:shadow-lg rounded-lg h-full">
           <div ref={drag} className="absolute left-2 top-1/2 -translate-y-1/2 cursor-grab text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
             <GripVertical size={20} />
           </div>
             <Card className="group/card w-full h-full flex flex-col">
-              <Link href={`/project/${project.id}`} target="_blank" className='contents'>
+              <Link href={`/project/${project.id}`} target="_blank" className="contents">
                   <CardHeader className="pl-10 pr-4">
                     <div className="flex items-start gap-4">
                       <Image
@@ -101,9 +114,29 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
               </CardFooter>
 
               <div className="absolute top-2 right-2 flex items-center gap-2">
-                 <span className="text-sm font-bold text-primary">
-                    {source === 'completed' ? 100 : project.progress}%
-                  </span>
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                     <button
+                        disabled={source === 'completed'}
+                        className="text-sm font-bold text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      >
+                       {source === 'completed' ? 100 : localProgress}%
+                    </button>
+                  </PopoverTrigger>
+                   {source === 'ideas' && (
+                      <PopoverContent className="w-48 p-2">
+                        <p className="text-xs font-medium text-center mb-2">Set Progress</p>
+                        <Slider
+                            value={[localProgress]}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setLocalProgress(value[0])}
+                            onValueChangeEnd={handleSliderCommit}
+                        />
+                      </PopoverContent>
+                   )}
+                </Popover>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">

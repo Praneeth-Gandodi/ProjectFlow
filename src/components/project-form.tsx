@@ -12,14 +12,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Upload, X } from 'lucide-react';
+import { Plus, Trash2, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -206,15 +205,18 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     if (!open) {
       if (Object.values(form.formState.dirtyFields).some(Boolean)) {
         const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
-        if (!confirmation) {
-          return; // User canceled, do not close
+        if (confirmation) {
+           setIsOpen(false);
         }
+      } else {
+        setIsOpen(false);
+        localStorage.removeItem(draftKey);
       }
+    } else {
+      setIsOpen(true);
     }
-    
-    // No dirty fields or user confirmed, so close the dialog
-    setIsOpen(open);
   };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
