@@ -221,9 +221,18 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
-      if (confirmation) {
-          setIsOpen(false);
+      const formValues = form.getValues();
+      const isDirty = Object.values(form.formState.dirtyFields).some(Boolean);
+      const hasValues = formValues.title || formValues.description || formValues.requirements || formValues.tags || formValues.links?.length;
+
+      if(isDirty || hasValues) {
+        const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
+        if (confirmation) {
+            setIsOpen(false);
+        }
+      } else {
+        setIsOpen(false);
+        localStorage.removeItem(draftKey);
       }
     } else {
       setIsOpen(true);
