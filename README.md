@@ -57,4 +57,4 @@ This project was made possible with the collaboration and inspiration of the fol
 
 - **Firebase Studio** — for providing the initial blueprint and backend-ready structure.  
 - **ChatGPT (OpenAI)** — for all code corrections, logic structuring, feature additions, and UI/UX refinements.  
-- **GitHub Copilot** — for generating the favicon and offering intelligent code completions.
+- **Copilot** — for generating the favicon and offering intelligent code completions.
