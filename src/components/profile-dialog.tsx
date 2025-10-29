@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { ProfileContext } from '@/context/profile-context';
 import { PinContext } from '@/context/pin-context';
 import { Separator } from './ui/separator';
+import { Label } from './ui/label';
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -183,7 +184,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
         <div className="space-y-4 pt-2">
             <h3 className="font-medium flex items-center gap-2"><KeyRound size={16} /> Security PIN</h3>
             <div className="space-y-2">
-                <FormLabel htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set a New PIN'}</FormLabel>
+                <Label htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set a New PIN'}</Label>
                 <div className="flex gap-2">
                     <Input 
                         id="pin-input"
