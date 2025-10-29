@@ -1,30 +1,60 @@
-# Favicon Generator Web App
+# ProjectFlow
 
-This is a simple and responsive Favicon Generator web app built with **HTML**, **CSS**, and **JavaScript**.
+ProjectFlow is a modern and minimal Project Management Web Application built to help users organize, track, and complete projects efficiently.  
+It provides an intuitive interface to create, manage, and categorize projects as New or Completed — with editable requirements and descriptions.  
 
-## 🚀 Features
-- Upload any image (PNG, JPG, or SVG)
-- Preview the favicon before download
-- Download automatically generated favicons in `.ico` format
-- Clean UI with hover effects and light theme
+This app focuses on simplicity, responsiveness, and a beautiful user experience inspired by modern dashboard systems.
 
+---
 
-## 🧠 How It Works
-1. User uploads an image.
-2. The app converts it into a `.ico` favicon.
-3. A preview is displayed.
-4. User can download the generated favicon instantly.
+## Features
 
-## 🛠️ Technologies Used
-- HTML5
-- CSS3 (Flexbox, Transitions)
-- JavaScript (FileReader, Canvas)
+- Add, edit, and delete project details  
+- Separate tabs for New Projects and Completed Projects  
+- Smart search with live filtering  
+- Light/Dark mode toggle  
+- Export and Import project data (JSON or CSV format)  
+- Custom logo and favicon  
+- Local storage integration (via Firebase-ready structure)
 
-## ⚡ How to Use
-1. Clone or download this project.
-2. Open `index.html` in your browser.
-3. Upload an image and click **Generate Favicon**.
-4. Click **Download** to save your favicon.
+---
 
-## 📜 License
-This project is open-source and free to use for personal and commercial projects.
+## Tech Stack
+
+- React + TypeScript  
+- Tailwind CSS for design  
+- ShadCN/UI components  
+- Lucide Icons for vector graphics  
+- Firebase-ready structure (for authentication, storage, etc.)  
+- Vite for fast builds  
+
+---
+
+## Getting Started
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Praneeth-Gandodi/ProjectFlow.git
+cd ProjectFlow
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Run the Development Server
+```bash
+npm run dev
+```
+Then open the localhost URL from the terminal.
+
+---
+
+## Credits
+
+This project was made possible with the collaboration and inspiration of the following tools and platforms:
+
+- **Firebase Studio** — for providing the initial blueprint and backend-ready structure.  
+- **ChatGPT (OpenAI)** — for all code corrections, logic structuring, feature additions, and UI/UX refinements.  
+- **GitHub Copilot** — for generating the favicon and offering intelligent code completions.
