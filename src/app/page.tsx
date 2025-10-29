@@ -10,6 +10,7 @@ import type { Project, Link } from './types';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { INITIAL_IDEAS, INITIAL_COMPLETED, INITIAL_LINKS } from './data';
+import Papa from 'papaparse';
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -65,6 +66,55 @@ export default function Home() {
     links.filter(l => l.title.toLowerCase().includes(searchTerm.toLowerCase()) || (l.description && l.description.toLowerCase().includes(searchTerm.toLowerCase()))),
     [links, searchTerm]
   );
+
+  const downloadFile = (filename: string, content: string, mimeType: string) => {
+    const element = document.createElement('a');
+    const file = new Blob([content], { type: mimeType });
+    element.href = URL.createObjectURL(file);
+    element.download = filename;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const handleExport = (format: 'json' | 'csv-projects' | 'csv-links') => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    switch (format) {
+      case 'json': {
+        const allData = {
+          ideas,
+          completed,
+          links,
+          exportedAt: new Date().toISOString(),
+        };
+        downloadFile(`projectflow-backup-${timestamp}.json`, JSON.stringify(allData, null, 2), 'application/json');
+        break;
+      }
+      case 'csv-projects': {
+        const allProjects = [
+          ...ideas.map(p => ({ ...p, status: 'idea' })),
+          ...completed.map(p => ({ ...p, status: 'completed' })),
+        ];
+        const csvData = Papa.unparse(allProjects.map(p => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          status: p.status,
+          progress: p.progress,
+          tags: p.tags.join(', '),
+          links: JSON.stringify(p.links),
+          requirements: p.requirements,
+        })));
+        downloadFile(`projectflow-projects-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
+        break;
+      }
+      case 'csv-links': {
+        const csvData = Papa.unparse(links);
+        downloadFile(`projectflow-links-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
+        break;
+      }
+    }
+  };
   
   if (!isClient) {
     return null; // Or a loading spinner
@@ -73,7 +123,7 @@ export default function Home() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col min-h-screen">
-        <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} />
 
         <main className="flex-1 container mx-auto py-8 px-4 md:px-6">
           <DashboardStats ideasCount={ideas.length} completedCount={completed.length} />
