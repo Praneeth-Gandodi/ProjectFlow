@@ -10,6 +10,7 @@ export const INITIAL_IDEAS: Project[] = [
     logo: 'https://picsum.photos/seed/1/200/200',
     progress: 25,
     tags: ['AI', 'Productivity'],
+    notes: [],
   },
   {
     id: 'idea-2',
@@ -20,6 +21,7 @@ export const INITIAL_IDEAS: Project[] = [
     logo: 'https://picsum.photos/seed/2/200/200',
     progress: 50,
     tags: ['Fitness', 'Mobile'],
+    notes: [],
   },
   {
     id: 'idea-3',
@@ -30,6 +32,7 @@ export const INITIAL_IDEAS: Project[] = [
     logo: 'https://picsum.photos/seed/3/200/200',
     progress: 10,
     tags: ['Community', 'Education'],
+    notes: [],
   },
 ];
 
@@ -43,6 +46,7 @@ export const INITIAL_COMPLETED: Project[] = [
     logo: 'https://picsum.photos/seed/4/200/200',
     progress: 100,
     tags: ['Web', 'Portfolio'],
+    notes: [],
   },
 ];
 

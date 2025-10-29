@@ -1,3 +1,10 @@
+
+export interface Note {
+  id: string;
+  date: string;
+  content: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -7,6 +14,7 @@ export interface Project {
   logo: string;
   progress: number;
   tags: string[];
+  notes?: Note[];
 }
 
 export interface Link {
