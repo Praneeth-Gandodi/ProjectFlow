@@ -13,8 +13,6 @@ import type { Project } from '@/app/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 
 
 export default function ProjectDetailsPage() {
@@ -40,20 +38,16 @@ export default function ProjectDetailsPage() {
     }
   }, [id, ideas, completed, isClient]);
 
-  if (!isClient) {
+  if (!isClient || !project) {
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div className="text-2xl">Loading Project...</div>
-        </div>
-    );
-  }
-
-  if (!project) {
-     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
-            <h1 className="text-4xl font-bold mb-4">404 - Project Not Found</h1>
-            <p className="text-muted-foreground mb-8">The project you are looking for does not exist.</p>
-            <Button onClick={() => router.push('/')}><ArrowLeft className="mr-2"/> Go Back Home</Button>
+            <h1 className="text-4xl font-bold mb-4">{!isClient ? 'Loading Project...' : '404 - Project Not Found'}</h1>
+            {!isClient ? null :
+              <>
+                <p className="text-muted-foreground mb-8">The project you are looking for does not exist.</p>
+                <Button onClick={() => router.push('/')}><ArrowLeft className="mr-2"/> Go Back Home</Button>
+              </>
+            }
         </div>
     );
   }
@@ -62,7 +56,6 @@ export default function ProjectDetailsPage() {
   const isCompleted = project.progress === 100 || completed.some(p => p.id === project.id);
 
   return (
-    <DndProvider backend={HTML5Backend}>
       <div className={cn("flex flex-col min-h-screen", font === 'serif' ? 'font-serif' : 'font-sans')}>
          {/* Dummy header props as they are not used on this page */}
         <AppHeader searchTerm="" setSearchTerm={() => {}} onExport={() => {}} onImport={() => {}} />
@@ -149,6 +142,5 @@ export default function ProjectDetailsPage() {
           </div>
         </main>
       </div>
-    </DndProvider>
   );
 }
