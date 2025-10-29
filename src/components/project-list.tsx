@@ -7,7 +7,6 @@ import { useDrop } from 'react-dnd';
 import { useToast } from '@/hooks/use-toast';
 
 interface ProjectListProps {
-  title: string;
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   onEdit: (project: Project, source: 'ideas' | 'completed') => void;
@@ -17,7 +16,7 @@ interface ProjectListProps {
   setCompleted: React.Dispatch<React.SetStateAction<Project[]>>;
 }
 
-export function ProjectList({ title, projects, setProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
+export function ProjectList({ projects, setProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
     const { toast } = useToast();
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'project',
@@ -64,7 +63,7 @@ export function ProjectList({ title, projects, setProjects, onEdit, columnId, on
 
   const handleMarkAsCompleted = (project: Project) => {
     setIdeas(prev => prev.filter(p => p.id !== project.id));
-    setCompleted(prev => [...prev, { ...project, progress: 100 }]);
+    setCompleted(prev => [{ ...project, progress: 100 }, ...prev]);
     toast({
         title: 'Project Completed!',
         description: `"${project.title}" has been moved to Completed.`,
@@ -73,7 +72,7 @@ export function ProjectList({ title, projects, setProjects, onEdit, columnId, on
 
   return (
     <div ref={drop} className={`min-h-[300px] transition-colors ${isOver ? 'bg-accent/50' : ''} rounded-lg p-1`}>
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {projects.length > 0 ? (
                 projects.map((project) => (
                     <ProjectCard
@@ -88,8 +87,11 @@ export function ProjectList({ title, projects, setProjects, onEdit, columnId, on
                     />
                 ))
             ) : (
-                <div className="text-center text-muted-foreground py-10">
-                    No projects here. Drag projects to this list.
+                 <div className="col-span-full text-center text-muted-foreground py-10">
+                    {
+                      isOver ? "Release to drop" : 
+                      (columnId === 'ideas' ? "No ideas yet. Add one or drag a completed project here." : "No completed projects yet. Drag an idea here to complete it.")
+                    }
                 </div>
             )}
         </div>

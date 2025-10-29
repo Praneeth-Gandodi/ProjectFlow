@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,35 +11,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { INITIAL_IDEAS, INITIAL_COMPLETED, INITIAL_LINKS } from './data';
 import Papa from 'papaparse';
-
-function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(error);
-      return initialValue;
-    }
-  });
-
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  return [storedValue, setValue];
-}
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { ProfileContext } from '@/context/profile-context';
+import { cn } from '@/lib/utils';
 
 export default function Home() {
   const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
@@ -47,6 +21,7 @@ export default function Home() {
   const [links, setLinks] = useLocalStorage<Link[]>('projectflow-links', INITIAL_LINKS);
   const [searchTerm, setSearchTerm] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const { font, layout } = useContext(ProfileContext);
 
   useEffect(() => {
     setIsClient(true);
@@ -122,10 +97,10 @@ export default function Home() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-col min-h-screen">
+      <div className={cn("flex flex-col min-h-screen", font === 'serif' ? 'font-serif' : 'font-sans')}>
         <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} />
 
-        <main className="flex-1 container mx-auto py-8 px-4 md:px-6">
+        <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-7xl' : 'max-w-5xl' )}>
           <DashboardStats ideasCount={ideas.length} completedCount={completed.length} />
 
           <Tabs defaultValue="ideas" className="mt-8">

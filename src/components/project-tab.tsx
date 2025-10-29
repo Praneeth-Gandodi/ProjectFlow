@@ -38,30 +38,31 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     if (from === to) return;
 
     const sourceList = from === 'ideas' ? allIdeas : allCompleted;
-    const projectToMove = sourceList.find(p => p.id === id);
+    const destList = to === 'ideas' ? allIdeas : allCompleted;
+    const setSource = from === 'ideas' ? setIdeas : setCompleted;
+    const setDest = to === 'ideas' ? setIdeas : setCompleted;
 
+    const projectToMove = sourceList.find(p => p.id === id);
     if (!projectToMove) return;
 
     const newSource = sourceList.filter(p => p.id !== id);
-    let newTarget;
-    
+    let newDest;
+
     if (to === 'ideas') {
-        newTarget = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...allIdeas];
-        setIdeas(newTarget);
-        setCompleted(newSource);
-        toast({
+      newDest = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...destList];
+       toast({
           title: 'Project Moved',
           description: `"${projectToMove.title}" moved back to Ideas.`,
         });
     } else {
-        newTarget = [{ ...projectToMove, progress: 100 }, ...allCompleted];
-        setIdeas(newSource);
-        setCompleted(newTarget);
-        toast({
+      newDest = [{ ...projectToMove, progress: 100 }, ...destList];
+      toast({
           title: 'Project Completed!',
           description: `"${projectToMove.title}" has been moved to Completed.`,
-        });
+      });
     }
+    setSource(newSource);
+    setDest(newDest);
   };
 
   return (
@@ -74,7 +75,6 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
 
       <div className="space-y-4">
         <ProjectList 
-            title={title}
             projects={projects}
             setProjects={setProjects}
             onEdit={handleEditProject}

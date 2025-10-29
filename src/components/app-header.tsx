@@ -1,17 +1,9 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Download, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AppLogo } from './icons';
-import { Button } from './ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { ProfileMenu } from './profile-menu';
 
 interface AppHeaderProps {
   searchTerm: string;
@@ -43,28 +35,8 @@ export function AppHeader({ searchTerm, setSearchTerm, onExport }: AppHeaderProp
             </div>
           </div>
           <nav className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Export Data</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onExport('json')}>
-                  Backup (JSON)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('csv-projects')}>
-                  Projects (CSV)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('csv-links')}>
-                  Links (CSV)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <ThemeToggle />
+            <ProfileMenu onExport={onExport} />
           </nav>
         </div>
       </div>

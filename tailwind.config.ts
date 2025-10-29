@@ -10,7 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Open Sans', 'sans-serif'],
+        sans: ['Open Sans', 'sans-serif'],
+        serif: ['Merriweather', 'serif'],
         headline: ['Roboto', 'sans-serif'],
         code: ['monospace'],
       },
