@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { AppLogo } from './icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { KeyRound } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const MAX_ATTEMPTS = 5;
 
@@ -15,6 +16,7 @@ export function AppLock({ children }: { children: React.ReactNode }) {
   const [pinAttempt, setPinAttempt] = useState('');
   const [showReset, setShowReset] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
@@ -25,6 +27,8 @@ export function AppLock({ children }: { children: React.ReactNode }) {
       if (resetPin(pinAttempt)) {
         setShowReset(false);
         setPinAttempt('');
+      } else {
+        toast({ variant: 'destructive', title: 'Invalid Master PIN' });
       }
     } else {
       unlockApp(pinAttempt);

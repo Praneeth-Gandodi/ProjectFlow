@@ -53,9 +53,11 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
   });
   
   useEffect(() => {
-    form.reset({ name, avatar: avatar || '', github: github || '' });
-    setAvatarPreview(avatar);
-    setPinInputValue('');
+    if (isOpen) {
+      form.reset({ name, avatar: avatar || '', github: github || '' });
+      setAvatarPreview(avatar);
+      setPinInputValue('');
+    }
   }, [isOpen, name, avatar, github, form]);
 
 
@@ -181,7 +183,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
         <div className="space-y-4 pt-2">
             <h3 className="font-medium flex items-center gap-2"><KeyRound size={16} /> Security PIN</h3>
             <div className="space-y-2">
-                <FormLabel htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set PIN'}</FormLabel>
+                <FormLabel htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set a New PIN'}</FormLabel>
                 <div className="flex gap-2">
                     <Input 
                         id="pin-input"
@@ -191,7 +193,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
                         onChange={(e) => setPinInputValue(e.target.value.replace(/\D/g, ''))}
                         placeholder="6-digit PIN"
                     />
-                    <Button type="button" onClick={handlePinChange}>Set/Change</Button>
+                    <Button type="button" onClick={handlePinChange}>{userPin ? 'Change' : 'Set'}</Button>
                 </div>
             </div>
             {userPin && (
