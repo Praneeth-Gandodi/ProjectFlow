@@ -188,8 +188,8 @@ export default function ProjectDetailsPage() {
                     <CardContent>
                         {isEditing ? (
                           <div className="space-y-2">
-                            <Input value={editData.title} onChange={(e) => handleInputChange('title', e.target.value)} className="text-3xl font-headline font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0" />
-                            <Textarea value={editData.description} onChange={(e) => handleInputChange('description', e.target.value)} className="text-lg text-muted-foreground mt-1 border-0 p-0 h-auto shadow-none focus-visible:ring-0" />
+                            <Input value={editData.title || ''} onChange={(e) => handleInputChange('title', e.target.value)} className="text-3xl font-headline font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0" />
+                            <Textarea value={editData.description || ''} onChange={(e) => handleInputChange('description', e.target.value)} className="text-lg text-muted-foreground mt-1 border-0 p-0 h-auto shadow-none focus-visible:ring-0" />
                           </div>
                         ) : (
                           <>
@@ -237,7 +237,7 @@ export default function ProjectDetailsPage() {
                     </CardHeader>
                     <CardContent>
                         {isEditing ? (
-                          <Textarea value={editData.requirements} onChange={(e) => handleInputChange('requirements', e.target.value)} className="text-base min-h-48" />
+                          <Textarea value={editData.requirements || ''} onChange={(e) => handleInputChange('requirements', e.target.value)} className="text-base min-h-48" />
                         ) : (
                           <div className="text-base text-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-md border min-h-48">{currentData.requirements || 'No requirements specified.'}</div>
                         )}
