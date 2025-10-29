@@ -32,34 +32,73 @@ const formSchema = z.object({
   description: z.string().optional(),
 });
 
+type LinkFormData = z.infer<typeof formSchema>;
+
+const getDraftKey = (linkId: string | null) => `link_draft_${linkId || 'new'}`;
+
 export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
   const { toast } = useToast();
-  const form = useForm<z.infer<typeof formSchema>>({
+  const draftKey = getDraftKey(link?.id ?? null);
+  
+  const form = useForm<LinkFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      url: '',
-      description: '',
+    defaultValues: () => {
+      if (typeof window !== 'undefined') {
+        const savedDraft = localStorage.getItem(draftKey);
+        if (savedDraft) {
+          try {
+            return JSON.parse(savedDraft);
+          } catch(e) {
+            console.error("Failed to parse link draft", e);
+          }
+        }
+      }
+      return link ? {
+        title: link.title,
+        url: link.url,
+        description: link.description || '',
+      } : {
+        title: '',
+        url: '',
+        description: '',
+      }
     },
   });
 
   useEffect(() => {
-    if (link) {
-      form.reset({
-        title: link.title,
-        url: link.url,
-        description: link.description || '',
-      });
-    } else {
-      form.reset({
-        title: '',
-        url: '',
-        description: '',
-      });
-    }
-  }, [link, isOpen, form]);
+    const subscription = form.watch((value) => {
+      localStorage.setItem(draftKey, JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey]);
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  useEffect(() => {
+    if (isOpen) {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        try {
+          form.reset(JSON.parse(savedDraft));
+        } catch (e) {
+          console.error("Failed to parse link draft", e);
+          form.reset(link ? { title: link.title, url: link.url, description: link.description || '' } : { title: '', url: '', description: '' });
+        }
+      } else if (link) {
+        form.reset({
+          title: link.title,
+          url: link.url,
+          description: link.description || '',
+        });
+      } else {
+        form.reset({
+          title: '',
+          url: '',
+          description: '',
+        });
+      }
+    }
+  }, [link, isOpen, form, draftKey]);
+
+  const onSubmit = (values: LinkFormData) => {
     if (link) {
       // Editing existing link
       setLinks(prev => prev.map(l => (l.id === link.id ? { ...l, ...values } : l)));
@@ -73,16 +112,28 @@ export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
       setLinks(prev => [newLink, ...prev]);
       toast({ title: 'New link added!' });
     }
+    localStorage.removeItem(draftKey);
     setIsOpen(false);
   };
+  
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
+      if (confirmation) {
+          setIsOpen(false);
+      }
+    } else {
+      setIsOpen(true);
+    }
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="font-headline">{link ? 'Edit Link' : 'Add New Link'}</DialogTitle>
           <DialogDescription>
-            {link ? 'Make changes to your saved link.' : 'Add a new useful link to your collection.'}
+            {link ? 'Make changes to your saved link.' : 'Add a new useful link to your collection.'} Your progress is saved automatically.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

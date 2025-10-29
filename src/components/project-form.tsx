@@ -41,20 +41,49 @@ const formSchema = z.object({
   })).optional(),
 });
 
+type ProjectFormData = z.infer<typeof formSchema>;
+
+const getDraftKey = (projectId: string | null) => `project_draft_${projectId || 'new'}`;
+
 export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted }: ProjectFormProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const draftKey = getDraftKey(project?.id ?? null);
+
+  const form = useForm<ProjectFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      requirements: '',
-      logo: '',
-      tags: '',
-      links: [],
+    defaultValues: () => {
+      if (typeof window !== 'undefined') {
+        const savedDraft = localStorage.getItem(draftKey);
+        if (savedDraft) {
+          try {
+            return JSON.parse(savedDraft);
+          } catch (e) {
+            console.error("Failed to parse project draft", e);
+          }
+        }
+      }
+      if (project) {
+        return {
+          title: project.title,
+          description: project.description,
+          requirements: project.requirements,
+          logo: project.logo,
+          tags: project.tags?.join(', '),
+          links: project.links || [],
+        }
+      }
+      const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
+      return {
+        title: '',
+        description: '',
+        requirements: '1. ',
+        logo: defaultLogo,
+        tags: '',
+        links: [],
+      }
     },
   });
 
@@ -64,31 +93,61 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   });
 
   useEffect(() => {
+    const subscription = form.watch((value) => {
+      localStorage.setItem(draftKey, JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey]);
+
+  useEffect(() => {
     if (isOpen) {
-        if (project) {
-          form.reset({
+        const savedDraft = localStorage.getItem(draftKey);
+        let initialValues: ProjectFormData;
+
+        if (savedDraft) {
+          try {
+            initialValues = JSON.parse(savedDraft);
+          } catch(e) {
+             initialValues = project ? {
+              title: project.title,
+              description: project.description,
+              requirements: project.requirements,
+              logo: project.logo,
+              tags: project.tags?.join(', '),
+              links: project.links || [],
+            } : {
+              title: '',
+              description: '',
+              requirements: '1. ',
+              logo: `https://picsum.photos/seed/${Date.now()}/200/200`,
+              tags: '',
+              links: [],
+            }
+          }
+        } else if (project) {
+          initialValues = {
             title: project.title,
             description: project.description,
             requirements: project.requirements,
             logo: project.logo,
             tags: project.tags?.join(', '),
             links: project.links || [],
-          });
-          setLogoPreview(project.logo || null);
+          };
         } else {
           const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
-          form.reset({
+          initialValues = {
             title: '',
             description: '',
             requirements: '1. ',
             logo: defaultLogo,
             tags: '',
             links: [],
-          });
-          setLogoPreview(defaultLogo);
+          };
         }
+        form.reset(initialValues);
+        setLogoPreview(initialValues.logo || null);
     }
-  }, [project, isOpen, form]);
+  }, [project, isOpen, form, draftKey]);
 
   const handleLogoUploadClick = () => {
     fileInputRef.current?.click();
@@ -127,7 +186,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     form.setValue('requirements', value, { shouldValidate: true });
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: ProjectFormData) => {
     const setTarget = project?.source === 'completed' ? setCompleted : setIdeas;
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
@@ -156,16 +215,28 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       setIdeas(prev => [newProject, ...prev]);
       toast({ title: 'New project added!' });
     }
+    localStorage.removeItem(draftKey);
     setIsOpen(false);
   };
 
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
+      if (confirmation) {
+          setIsOpen(false);
+      }
+    } else {
+      setIsOpen(true);
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-headline">{project ? 'Edit Project' : 'Add New Project'}</DialogTitle>
           <DialogDescription>
-            {project ? 'Make changes to your project.' : 'Fill in the details for your new project idea.'}
+            {project ? 'Make changes to your project.' : 'Fill in the details for your new project idea.'} Your progress is saved automatically.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
