@@ -36,23 +36,21 @@ This app focuses on simplicity, responsiveness, and a beautiful user experience 
 ```bash
 git clone https://github.com/your-username/ProjectFlow.git
 cd ProjectFlow
-
-### 2. Install Dependencies
-```bash
+2. Install Dependencies
+bash
+Copy code
 npm install
-
-### 3. Run the Development Server
-```bash 
+3. Run the Development Server
+bash
+Copy code
 npm run dev
-
-Then open the localhost URL from the terminal.
+Then open the localhost URL displayed in your terminal.
 
 Credits
-
 This project was made possible with the collaboration and inspiration of the following tools and platforms:
 
 Firebase Studio — for providing the initial blueprint and backend-ready structure.
 
 ChatGPT (OpenAI) — for all code corrections, logic structuring, feature additions, and UI/UX refinements.
 
-Copilot — for generating the favicon and offering intelligent code completions.
+GitHub Copilot — for generating the favicon and offering intelligent code completions.
