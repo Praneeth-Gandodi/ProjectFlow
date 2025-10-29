@@ -20,6 +20,7 @@ import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Upload } from 'lucide-react';
 import Image from 'next/image';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ProjectFormProps {
   isOpen: boolean;
@@ -200,9 +201,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      const formValues = form.getValues();
-      const hasValues = formValues.title || formValues.description || formValues.requirements || formValues.tags || formValues.links?.length;
-
       if(Object.values(form.formState.dirtyFields).some(Boolean)) {
         const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
         if (confirmation) {
@@ -219,147 +217,164 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-headline">{project ? 'Edit Project' : 'Add New Project'}</DialogTitle>
           <DialogDescription>
-            {project ? 'Make changes to your project.' : 'Fill in the details for your new project idea.'} Your progress is saved automatically.
+            {project ? 'Make changes to your project.' : 'Fill in the details for your new project idea.'} Your draft is auto-saved.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-             <div className="flex items-center gap-4">
-              {logoPreview && (
-                <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
-              )}
-              <div className="flex-1 space-y-2">
-                <FormLabel>Logo</FormLabel>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Upload
-                  </Button>
-                  <Input 
-                    ref={fileInputRef}
-                    type="file" 
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow overflow-hidden flex flex-col">
+            <Tabs defaultValue="general" className="flex-grow flex flex-col overflow-hidden">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="general">General</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="links">Links</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex-grow overflow-y-auto pt-4 pr-1">
+                <TabsContent value="general" className="space-y-6 px-2">
                   <FormField
                     control={form.control}
-                    name="logo"
+                    name="title"
                     render={({ field }) => (
-                      <FormItem className='flex-1'>
+                      <FormItem>
+                        <FormLabel>Project Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
+                          <Input placeholder="e.g., AI-Powered Scheduler" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-              </div>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., AI-Powered Scheduler" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe the project..." {...field} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="requirements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Requirements</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="1. First requirement..." 
-                      {...field} 
-                      rows={5}
-                      onChange={handleRequirementsChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags (comma-separated)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Web, Mobile, AI" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div>
-              <FormLabel>Useful Links</FormLabel>
-              <div className="space-y-2 mt-2">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`links.${index}.title`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                           <FormControl>
-                            <Input placeholder="Link Title" {...field} />
-                           </FormControl>
-                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`links.${index}.url`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                           <FormControl>
-                             <Input placeholder="https://..." {...field} />
-                           </FormControl>
-                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe the project..." {...field} rows={4} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <div className="flex items-center gap-4 pt-2">
+                    {logoPreview && (
+                      <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <FormLabel>Logo</FormLabel>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
+                          <Upload className="mr-2 h-4 w-4" /> Upload
+                        </Button>
+                        <Input 
+                          ref={fileInputRef}
+                          type="file" 
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="logo"
+                          render={({ field }) => (
+                            <FormItem className='flex-1'>
+                              <FormControl>
+                                <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-               <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ title: '', url: '' })}>
-                <Plus className="mr-2 h-4 w-4" /> Add Link
-              </Button>
-            </div>
+                </TabsContent>
 
-            <DialogFooter>
+                <TabsContent value="details" className="space-y-6 px-2">
+                  <FormField
+                    control={form.control}
+                    name="requirements"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Requirements</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="1. First requirement..." 
+                            {...field} 
+                            rows={8}
+                            onChange={handleRequirementsChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags (comma-separated)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Web, Mobile, AI" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                <TabsContent value="links" className="px-2">
+                    <div className="space-y-4">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+                          <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`links.${index}.title`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Link Title</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Figma Mockups" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`links.${index}.url`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>URL</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="https://..." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" className="mt-7 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remove Link</span>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ title: '', url: '' })}>
+                      <Plus className="mr-2 h-4 w-4" /> Add Link
+                    </Button>
+                </TabsContent>
+              </div>
+            </Tabs>
+            <DialogFooter className="pt-4 border-t">
               <Button type="submit">Save</Button>
             </DialogFooter>
           </form>
