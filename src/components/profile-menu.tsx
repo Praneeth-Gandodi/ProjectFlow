@@ -15,10 +15,11 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Download, Edit, Github, Layout, Moon, Palette, Pilcrow, Sun, Upload, User } from 'lucide-react';
+import { Download, Edit, Github, Layout, Lock, Pilcrow, User } from 'lucide-react';
 import { useContext, useState } from 'react';
 import { ProfileContext } from '@/context/profile-context';
 import { ProfileDialog } from './profile-dialog';
+import { PinContext } from '@/context/pin-context';
 
 interface ProfileMenuProps {
   onExport: (format: 'json' | 'csv-projects' | 'csv-links') => void;
@@ -26,6 +27,7 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ onExport }: ProfileMenuProps) {
   const { name, avatar, github, font, setFont, layout, setLayout } = useContext(ProfileContext);
+  const { lockApp } = useContext(PinContext);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   return (
@@ -56,6 +58,10 @@ export function ProfileMenu({ onExport }: ProfileMenuProps) {
           <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
             <span>Edit Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={lockApp}>
+            <Lock className="mr-2 h-4 w-4" />
+            <span>Lock App</span>
           </DropdownMenuItem>
 
           <DropdownMenuSub>
