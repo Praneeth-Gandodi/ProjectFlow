@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ExternalLink, Link as LinkIcon, Tag, ArrowLeft, Edit, Save, Plus, X, NotebookText, Trash2 } from 'lucide-react';
 import Image from 'next/image';
-import type { Project, Note } from '@/app/types';
+import type { Project, Note, Link as LinkType } from '@/app/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+
+type EditableProject = Partial<Omit<Project, 'tags' | 'links'>> & {
+  tags?: string;
+  links?: LinkType[];
+};
 
 export default function ProjectDetailsPage() {
   const router = useRouter();
@@ -31,7 +36,7 @@ export default function ProjectDetailsPage() {
   const [isClient, setIsClient] = useState(false);
   const { font, layout } = useContext(ProfileContext);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<Partial<Project>>({});
+  const [editData, setEditData] = useState<EditableProject>({});
   const [newNote, setNewNote] = useState('');
 
   useEffect(() => {
@@ -58,9 +63,15 @@ export default function ProjectDetailsPage() {
     const isCompletedProject = completed.some(p => p.id === project.id);
     const setTarget = isCompletedProject ? setCompleted : setIdeas;
 
+    const updatedProjectData = {
+      ...editData,
+      tags: (editData.tags as string || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+      links: editData.links || project.links
+    };
+
     setTarget(prev => 
       prev.map(p => 
-        p.id === project.id ? { ...p, ...editData, tags: (editData.tags as any).split(',').map((t: string) => t.trim()).filter(Boolean) } : p
+        p.id === project.id ? { ...p, ...updatedProjectData } : p
       )
     );
 
@@ -100,6 +111,23 @@ export default function ProjectDetailsPage() {
     toast({ title: "Note deleted." });
   }
 
+  const handleLinkChange = (index: number, field: keyof LinkType, value: string) => {
+    const newLinks = [...(editData.links || project?.links || [])];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setEditData(prev => ({ ...prev, links: newLinks }));
+  };
+
+  const handleAddLink = () => {
+    const newLinks = [...(editData.links || project?.links || []), { title: '', url: '' }];
+    setEditData(prev => ({ ...prev, links: newLinks }));
+  };
+
+  const handleDeleteLink = (index: number) => {
+    const newLinks = [...(editData.links || project?.links || [])];
+    newLinks.splice(index, 1);
+    setEditData(prev => ({ ...prev, links: newLinks }));
+  };
+
   if (!isClient || !project) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
@@ -118,6 +146,8 @@ export default function ProjectDetailsPage() {
   const logoSrc = currentData.logo || `https://picsum.photos/seed/${project.id}/200/200`;
   const isCompleted = project.progress === 100 || completed.some(p => p.id === project.id);
   const tagList = Array.isArray(currentData.tags) ? currentData.tags : (currentData.tags as string || '').split(',').map(t => t.trim()).filter(Boolean);
+  const links = isEditing ? (editData.links || []) : (project.links || []);
+
 
   return (
       <div className={cn("flex flex-col min-h-screen", font === 'serif' ? 'font-serif' : 'font-sans')}>
@@ -208,13 +238,35 @@ export default function ProjectDetailsPage() {
                     </CardContent>
                 </Card>
 
-                {project.links && project.links.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline text-xl">Useful Links</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {project.links.map((link, index) => (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="font-headline text-xl">Useful Links</CardTitle>
+                        {isEditing && <Button size="sm" variant="outline" onClick={handleAddLink}><Plus className="mr-2 h-4 w-4"/> Add Link</Button>}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {isEditing ? (
+                            links.map((link, index) => (
+                                <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border">
+                                    <LinkIcon className="h-5 w-5 text-primary" />
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <Input
+                                            placeholder="Link Title"
+                                            value={link.title}
+                                            onChange={(e) => handleLinkChange(index, 'title', e.target.value)}
+                                        />
+                                        <Input
+                                            placeholder="https://example.com"
+                                            value={link.url}
+                                            onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
+                                        />
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteLink(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))
+                        ) : (
+                            links.map((link, index) => (
                                 <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border hover:bg-muted/80 transition-colors">
                                     <LinkIcon className="h-5 w-5 text-primary" />
                                     <div className="flex-1">
@@ -222,11 +274,12 @@ export default function ProjectDetailsPage() {
                                         <p className="text-sm text-muted-foreground break-all">{link.url}</p>
                                     </div>
                                     <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                                a
-                            ))}
-                        </CardContent>
-                    </Card>
-                )}
+                                </a>
+                            ))
+                        )}
+                        {!links || links.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No links added.</p>}
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>

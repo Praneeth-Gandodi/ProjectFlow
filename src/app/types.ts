@@ -5,21 +5,21 @@ export interface Note {
   content: string;
 }
 
+export interface Link {
+  id?: string; // Optional for new links
+  title: string;
+  url: string;
+  description?: string;
+}
+
 export interface Project {
   id: string;
   title: string;
   description: string;
   requirements: string;
-  links: { title: string; url: string }[];
+  links: Link[];
   logo: string;
   progress: number;
   tags: string[];
   notes?: Note[];
-}
-
-export interface Link {
-  id: string;
-  title: string;
-  url: string;
-  description?: string;
 }
