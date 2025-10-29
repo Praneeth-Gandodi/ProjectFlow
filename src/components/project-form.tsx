@@ -201,20 +201,17 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   };
 
   const handleClose = (open: boolean) => {
-    if (open) {
-      setIsOpen(true);
-      return;
-    }
-
-    if (Object.values(form.formState.dirtyFields).some(Boolean)) {
-      const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
-      if (!confirmation) {
-        return; // User canceled, do not close
+    if (!open) {
+      if (Object.values(form.formState.dirtyFields).some(Boolean)) {
+        const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
+        if (!confirmation) {
+          return; // User canceled, do not close
+        }
       }
     }
     
     // No dirty fields or user confirmed, so close the dialog
-    setIsOpen(false);
+    setIsOpen(open);
   };
 
   return (
@@ -263,7 +260,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       </FormItem>
                     )}
                   />
-                   <div className="flex items-center gap-4 pt-4 pb-2">
+                   <div className="flex items-center gap-4 pt-4 pb-6">
                     {logoPreview && (
                       <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
                     )}
@@ -316,19 +313,21 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="tags"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tags (comma-separated)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. Web, Mobile, AI" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="pb-2">
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tags (comma-separated)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. Web, Mobile, AI" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="links" className="px-2">
@@ -370,7 +369,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                         </div>
                       ))}
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ title: '', url: '' })}>
+                    <Button type="button" variant="outline" size="sm" className="mt-4 mb-4" onClick={() => append({ title: '', url: '' })}>
                       <Plus className="mr-2 h-4 w-4" /> Add Link
                     </Button>
                 </TabsContent>
