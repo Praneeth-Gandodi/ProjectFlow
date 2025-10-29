@@ -31,21 +31,18 @@ export default function ProjectDetailsPage() {
   const { id } = params;
   const { toast } = useToast();
 
-  const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
-  const [completed, setCompleted] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
+  const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
+  const [completed, setCompleted, isCompletedLoaded] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
   const [project, setProject] = useState<Project | null>(null);
-  const [isClient, setIsClient] = useState(false);
   const { font, layout } = useContext(ProfileContext);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<EditableProject>({});
   const [newNote, setNewNote] = useState('');
 
+  const isDataLoaded = isIdeasLoaded && isCompletedLoaded;
+
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-  
-  useEffect(() => {
-    if (id && isClient) {
+    if (id && isDataLoaded) {
       const allProjects = [...ideas, ...completed];
       const foundProject = allProjects.find(p => p.id === id);
       setProject(foundProject || null);
@@ -56,7 +53,7 @@ export default function ProjectDetailsPage() {
         });
       }
     }
-  }, [id, ideas, completed, isClient]);
+  }, [id, ideas, completed, isDataLoaded]);
 
   const handleSave = () => {
     if (!project) return;
@@ -84,7 +81,7 @@ export default function ProjectDetailsPage() {
     toast({ title: "Project Saved!", description: "Your changes have been saved." });
   };
   
-  const handleInputChange = (field: keyof Omit<EditableProject, 'links'| 'tags'>, value: string) => {
+  const handleInputChange = (field: keyof Omit<EditableProject, 'links'| 'tags'>, value: string | number) => {
     setEditData(prev => ({...prev, [field]: value}));
   }
 
@@ -133,7 +130,7 @@ export default function ProjectDetailsPage() {
     setEditData(prev => ({ ...prev, links: newLinks }));
   };
 
-  if (!isClient) {
+  if (!isDataLoaded) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
             <h1 className="text-4xl font-bold mb-4">Loading Project...</h1>
@@ -331,3 +328,5 @@ export default function ProjectDetailsPage() {
       </div>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,22 +12,22 @@ function parseJSON<T>(value: string | null): T | undefined {
   }
 }
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
-  const readValue = useCallback((): T => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
+export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void, boolean] {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
 
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? (parseJSON(item) as T) : initialValue;
+      if (item) {
+        setStoredValue(parseJSON(item) as T);
+      }
     } catch (error) {
       console.warn(`Error reading localStorage key “${key}”:`, error);
-      return initialValue;
     }
-  }, [initialValue, key]);
-
-  const [storedValue, setStoredValue] = useState<T>(readValue);
+    setIsLoaded(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setValue = (value: T | ((prev: T) => T)) => {
     if (typeof window === 'undefined') {
@@ -46,13 +47,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   };
 
   useEffect(() => {
-    setStoredValue(readValue());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     const handleStorageChange = () => {
-      setStoredValue(readValue());
+      try {
+        const item = window.localStorage.getItem(key);
+        if (item) {
+          setStoredValue(parseJSON(item) as T);
+        }
+      } catch (error) {
+        console.warn(`Error reading localStorage key “${key}”:`, error);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -62,7 +65,9 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('local-storage', handleStorageChange);
     };
-  }, [readValue]);
+  }, [key]);
 
-  return [storedValue, setValue];
+  return [storedValue, setValue, isLoaded];
 }
+
+    

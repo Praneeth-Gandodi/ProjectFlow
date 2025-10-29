@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
@@ -17,19 +18,15 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
-  const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
-  const [completed, setCompleted] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
+  const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
+  const [completed, setCompleted, isCompletedLoaded] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
   const [links, setLinks] = useLocalStorage<Link[]>('projectflow-links', INITIAL_LINKS);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isClient, setIsClient] = useState(false);
   const { font, layout } = useContext(ProfileContext);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const isClient = isIdeasLoaded && isCompletedLoaded && Array.isArray(links);
 
   const filteredIdeas = useMemo(() =>
     ideas.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.description.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -192,3 +189,5 @@ export default function Home() {
     </DndProvider>
   );
 }
+
+    
