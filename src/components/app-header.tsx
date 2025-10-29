@@ -9,9 +9,10 @@ interface AppHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   onExport: (format: 'json' | 'csv-projects' | 'csv-links') => void;
+  onImport: () => void;
 }
 
-export function AppHeader({ searchTerm, setSearchTerm, onExport }: AppHeaderProps) {
+export function AppHeader({ searchTerm, setSearchTerm, onExport, onImport }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
@@ -36,7 +37,7 @@ export function AppHeader({ searchTerm, setSearchTerm, onExport }: AppHeaderProp
           </div>
           <nav className="flex items-center gap-2">
             <ThemeToggle />
-            <ProfileMenu onExport={onExport} />
+            <ProfileMenu onExport={onExport} onImport={onImport} />
           </nav>
         </div>
       </div>

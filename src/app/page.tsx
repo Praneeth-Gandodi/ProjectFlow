@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,7 @@ import Papa from 'papaparse';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
@@ -22,6 +23,9 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isClient, setIsClient] = useState(false);
   const { font, layout } = useContext(ProfileContext);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
 
   useEffect(() => {
     setIsClient(true);
@@ -90,6 +94,45 @@ export default function Home() {
       }
     }
   };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const data = JSON.parse(text);
+        
+        if (Array.isArray(data.ideas) && Array.isArray(data.completed) && Array.isArray(data.links)) {
+          setIdeas(data.ideas);
+          setCompleted(data.completed);
+          setLinks(data.links);
+          toast({
+            title: 'Import Successful',
+            description: 'Your data has been restored from the backup.',
+          });
+        } else {
+          throw new Error('Invalid backup file format.');
+        }
+      } catch (error) {
+        console.error('Import failed:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Import Failed',
+          description: 'The selected file is not a valid backup file.',
+        });
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input so the same file can be loaded again
+    event.target.value = '';
+  };
   
   if (!isClient) {
     return null; // Or a loading spinner
@@ -98,7 +141,14 @@ export default function Home() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className={cn("flex flex-col min-h-screen", font === 'serif' ? 'font-serif' : 'font-sans')}>
-        <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} />
+        <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} onImport={handleImportClick} />
+        <input
+          type="file"
+          ref={importInputRef}
+          className="hidden"
+          accept="application/json"
+          onChange={handleImport}
+        />
 
         <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-7xl' : 'max-w-5xl' )}>
           <DashboardStats ideasCount={ideas.length} completedCount={completed.length} />

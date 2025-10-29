@@ -15,7 +15,7 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Download, Edit, Github, Layout, Lock, Pilcrow, User } from 'lucide-react';
+import { Download, Upload, Edit, Github, Layout, Lock, Pilcrow, User } from 'lucide-react';
 import { useContext, useState } from 'react';
 import { ProfileContext } from '@/context/profile-context';
 import { ProfileDialog } from './profile-dialog';
@@ -23,11 +23,12 @@ import { PinContext } from '@/context/pin-context';
 
 interface ProfileMenuProps {
   onExport: (format: 'json' | 'csv-projects' | 'csv-links') => void;
+  onImport: () => void;
 }
 
-export function ProfileMenu({ onExport }: ProfileMenuProps) {
+export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
   const { name, avatar, github, font, setFont, layout, setLayout } = useContext(ProfileContext);
-  const { lockApp } = useContext(PinContext);
+  const { lockApp, userPin } = useContext(PinContext);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   return (
@@ -59,10 +60,12 @@ export function ProfileMenu({ onExport }: ProfileMenuProps) {
             <Edit className="mr-2 h-4 w-4" />
             <span>Edit Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={lockApp}>
-            <Lock className="mr-2 h-4 w-4" />
-            <span>Lock App</span>
-          </DropdownMenuItem>
+          {userPin && (
+            <DropdownMenuItem onClick={lockApp}>
+              <Lock className="mr-2 h-4 w-4" />
+              <span>Lock App</span>
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
@@ -81,6 +84,11 @@ export function ProfileMenu({ onExport }: ProfileMenuProps) {
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          
+          <DropdownMenuItem onClick={onImport}>
+            <Upload className="mr-2 h-4 w-4" />
+            <span>Import Data</span>
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
