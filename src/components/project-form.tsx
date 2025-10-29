@@ -33,7 +33,7 @@ interface ProjectFormProps {
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().optional(),
   requirements: z.string().optional(),
   logo: z.string().optional(),
   tags: z.string().optional(),
@@ -98,7 +98,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         } else if (project) {
           initialValues = {
             title: project.title,
-            description: project.description,
+            description: project.description || '',
             requirements: project.requirements,
             logo: project.logo,
             tags: project.tags?.join(', '),
@@ -175,7 +175,8 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       // Editing existing project
       const updatedProject: Project = { 
           ...project, 
-          ...values, 
+          ...values,
+          description: values.description || '',
           logo: values.logo || project.logo,
           tags,
           links: values.links || [],
@@ -186,7 +187,8 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       // Adding new project
       const newProject: Project = {
         id: `idea-${Date.now()}`,
-        ...values,
+        title: values.title,
+        description: values.description || '',
         logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
         requirements: values.requirements || '',
         links: values.links || [],

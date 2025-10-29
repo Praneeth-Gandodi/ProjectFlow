@@ -22,24 +22,24 @@ export function AppHeader({ searchTerm, setSearchTerm, onExport, onImport }: App
             <span className="font-bold font-headline">ProjectFlow</span>
           </a>
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:w-auto md:flex-none">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
-          <nav className="flex items-center gap-2">
+        </div>
+        <nav className="flex items-center gap-2">
             <ThemeToggle />
             <ProfileMenu onExport={onExport} onImport={onImport} />
-          </nav>
-        </div>
+        </nav>
       </div>
     </header>
   );
