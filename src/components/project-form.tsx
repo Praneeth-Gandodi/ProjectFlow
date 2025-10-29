@@ -12,13 +12,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -200,20 +201,21 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   };
 
   const handleClose = (open: boolean) => {
-    if (!open) {
-      if(Object.values(form.formState.dirtyFields).some(Boolean)) {
-        const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
-        if (confirmation) {
-            setIsOpen(false);
-        }
-      } else {
-        setIsOpen(false);
-        localStorage.removeItem(draftKey);
-      }
-    } else {
+    if (open) {
       setIsOpen(true);
+      return;
     }
-  }
+
+    if (Object.values(form.formState.dirtyFields).some(Boolean)) {
+      const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
+      if (!confirmation) {
+        return; // User canceled, do not close
+      }
+    }
+    
+    // No dirty fields or user confirmed, so close the dialog
+    setIsOpen(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -261,7 +263,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       </FormItem>
                     )}
                   />
-                   <div className="flex items-center gap-4 pt-2">
+                   <div className="flex items-center gap-4 pt-4 pb-2">
                     {logoPreview && (
                       <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
                     )}
@@ -375,6 +377,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
               </div>
             </Tabs>
             <DialogFooter className="pt-4 border-t">
+              <Button type="button" variant="ghost" onClick={() => handleClose(false)}>Cancel</Button>
               <Button type="submit">Save</Button>
             </DialogFooter>
           </form>
