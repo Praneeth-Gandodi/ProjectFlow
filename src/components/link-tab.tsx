@@ -6,6 +6,7 @@ import { LinkCard } from './link-card';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 import { LinkForm } from './link-form';
+import { useToast } from '@/hooks/use-toast';
 
 interface LinkTabProps {
   links: Link[];
@@ -15,6 +16,7 @@ interface LinkTabProps {
 export function LinkTab({ links, setLinks }: LinkTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const { toast } = useToast();
 
   const handleAddLink = () => {
     setEditingLink(null);
@@ -27,7 +29,14 @@ export function LinkTab({ links, setLinks }: LinkTabProps) {
   };
   
   const handleDeleteLink = (id: string) => {
-    setLinks(prev => prev.filter(l => l.id !== id));
+    const linkToDelete = links.find(l => l.id === id);
+    if (linkToDelete) {
+      setLinks(prev => prev.filter(l => l.id !== id));
+      toast({
+        title: "Link Deleted",
+        description: `"${linkToDelete.title}" has been removed.`
+      });
+    }
   };
 
   return (

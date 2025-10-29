@@ -4,6 +4,7 @@ import React from 'react';
 import type { Project } from '@/app/types';
 import { ProjectCard } from './project-card';
 import { useDrop } from 'react-dnd';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProjectListProps {
   title: string;
@@ -17,6 +18,7 @@ interface ProjectListProps {
 }
 
 export function ProjectList({ title, projects, setProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
+    const { toast } = useToast();
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'project',
         drop: (item: { id: string, source: 'ideas' | 'completed' }) => {
@@ -42,16 +44,31 @@ export function ProjectList({ title, projects, setProjects, onEdit, columnId, on
   };
   
   const handleDelete = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
+    const projectToDelete = projects.find(p => p.id === id);
+    if (projectToDelete) {
+      setProjects(prev => prev.filter(p => p.id !== id));
+      toast({
+        title: 'Project Deleted',
+        description: `"${projectToDelete.title}" has been removed.`,
+      });
+    }
   };
 
   const handleUpdateProject = (updatedProject: Project) => {
     setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+     toast({
+        title: 'Progress Updated',
+        description: `"${updatedProject.title}" progress set to ${updatedProject.progress}%.`,
+      });
   }
 
   const handleMarkAsCompleted = (project: Project) => {
     setIdeas(prev => prev.filter(p => p.id !== project.id));
     setCompleted(prev => [...prev, { ...project, progress: 100 }]);
+    toast({
+        title: 'Project Completed!',
+        description: `"${project.title}" has been moved to Completed.`,
+    });
   };
 
   return (

@@ -6,6 +6,7 @@ import { ProjectList } from './project-list';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
 import { ProjectForm } from './project-form';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProjectTabProps {
   projects: Project[];
@@ -21,6 +22,7 @@ interface ProjectTabProps {
 export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allIdeas, allCompleted, isCompletedTab, title }: ProjectTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<(Project & { source: 'ideas' | 'completed' }) | null>(null);
+  const { toast } = useToast();
 
   const handleAddProject = () => {
     setEditingProject(null);
@@ -47,10 +49,18 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
         newTarget = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...allIdeas];
         setIdeas(newTarget);
         setCompleted(newSource);
+        toast({
+          title: 'Project Moved',
+          description: `"${projectToMove.title}" moved back to Ideas.`,
+        });
     } else {
         newTarget = [{ ...projectToMove, progress: 100 }, ...allCompleted];
         setIdeas(newSource);
         setCompleted(newTarget);
+        toast({
+          title: 'Project Completed!',
+          description: `"${projectToMove.title}" has been moved to Completed.`,
+        });
     }
   };
 
