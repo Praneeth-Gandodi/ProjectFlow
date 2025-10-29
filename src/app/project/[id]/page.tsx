@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { INITIAL_IDEAS, INITIAL_COMPLETED } from '@/app/data';
 
 type EditableProject = Partial<Omit<Project, 'tags' | 'links'>> & {
   tags?: string;
@@ -30,8 +31,8 @@ export default function ProjectDetailsPage() {
   const { id } = params;
   const { toast } = useToast();
 
-  const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', []);
-  const [completed, setCompleted] = useLocalStorage<Project[]>('projectflow-completed', []);
+  const [ideas, setIdeas] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
+  const [completed, setCompleted] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
   const [project, setProject] = useState<Project | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { font, layout } = useContext(ProfileContext);
@@ -69,9 +70,13 @@ export default function ProjectDetailsPage() {
       links: editData.links || project.links
     };
 
+    // Remove keys that are not part of the Project type to avoid saving extra data
+    delete (updatedProjectData as any).id;
+
+
     setTarget(prev => 
       prev.map(p => 
-        p.id === project.id ? { ...p, ...updatedProjectData } : p
+        p.id === project.id ? { ...p, ...(updatedProjectData as Omit<EditableProject, 'id'>) } : p
       )
     );
 
@@ -79,7 +84,7 @@ export default function ProjectDetailsPage() {
     toast({ title: "Project Saved!", description: "Your changes have been saved." });
   };
   
-  const handleInputChange = (field: keyof Project, value: string) => {
+  const handleInputChange = (field: keyof Omit<EditableProject, 'links'| 'tags'>, value: string) => {
     setEditData(prev => ({...prev, [field]: value}));
   }
 
@@ -118,7 +123,7 @@ export default function ProjectDetailsPage() {
   };
 
   const handleAddLink = () => {
-    const newLinks = [...(editData.links || project?.links || []), { title: '', url: '' }];
+    const newLinks = [...(editData.links || project?.links || []), { id: `new-link-${Date.now()}`, title: '', url: '' }];
     setEditData(prev => ({ ...prev, links: newLinks }));
   };
 
@@ -128,16 +133,20 @@ export default function ProjectDetailsPage() {
     setEditData(prev => ({ ...prev, links: newLinks }));
   };
 
-  if (!isClient || !project) {
+  if (!isClient) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
-            <h1 className="text-4xl font-bold mb-4">{!isClient ? 'Loading Project...' : '404 - Project Not Found'}</h1>
-            {!isClient ? null :
-              <>
-                <p className="text-muted-foreground mb-8">The project you are looking for does not exist.</p>
-                <Button onClick={() => router.push('/')}><ArrowLeft className="mr-2"/> Go Back Home</Button>
-              </>
-            }
+            <h1 className="text-4xl font-bold mb-4">Loading Project...</h1>
+        </div>
+    );
+  }
+
+  if (!project) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen">
+            <h1 className="text-4xl font-bold mb-4">404 - Project Not Found</h1>
+            <p className="text-muted-foreground mb-8">The project you are looking for does not exist.</p>
+            <Button onClick={() => router.push('/')}><ArrowLeft className="mr-2"/> Go Back Home</Button>
         </div>
     );
   }
@@ -246,7 +255,7 @@ export default function ProjectDetailsPage() {
                     <CardContent className="space-y-3">
                         {isEditing ? (
                             links.map((link, index) => (
-                                <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border">
+                                <div key={link.id || index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border">
                                     <LinkIcon className="h-5 w-5 text-primary" />
                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <Input
@@ -267,7 +276,7 @@ export default function ProjectDetailsPage() {
                             ))
                         ) : (
                             links.map((link, index) => (
-                                <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border hover:bg-muted/80 transition-colors">
+                                <a key={link.id || index} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border hover:bg-muted/80 transition-colors">
                                     <LinkIcon className="h-5 w-5 text-primary" />
                                     <div className="flex-1">
                                         <p className="font-semibold">{link.title}</p>
@@ -277,7 +286,7 @@ export default function ProjectDetailsPage() {
                                 </a>
                             ))
                         )}
-                        {!links || links.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No links added.</p>}
+                        {(!links || links.length === 0) && !isEditing && <p className="text-sm text-muted-foreground text-center py-4">No links added.</p>}
                     </CardContent>
                 </Card>
 
