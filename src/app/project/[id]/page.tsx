@@ -50,6 +50,8 @@ export default function ProjectDetailsPage() {
         setEditData({
           ...foundProject,
           tags: foundProject.tags.join(', '),
+          // Requirements are now managed as a string in the textarea for simplicity during edit
+          requirements: Array.isArray(foundProject.requirements) ? foundProject.requirements.join('\n') : foundProject.requirements,
         });
       }
     }
@@ -64,12 +66,12 @@ export default function ProjectDetailsPage() {
     const updatedProjectData = {
       ...editData,
       tags: (editData.tags as string || '').split(',').map((t: string) => t.trim()).filter(Boolean),
-      links: editData.links || project.links
+      links: editData.links || project.links,
+      // Convert requirements string back to array if needed, or just save as string
+      requirements: editData.requirements || project.requirements
     };
 
-    // Remove keys that are not part of the Project type to avoid saving extra data
     delete (updatedProjectData as any).id;
-
 
     setTarget(prev => 
       prev.map(p => 
@@ -150,9 +152,12 @@ export default function ProjectDetailsPage() {
   
   const currentData = isEditing ? editData : project;
   const logoSrc = currentData.logo || `https://picsum.photos/seed/${project.id}/200/200`;
-  const isCompleted = project.progress === 100 || completed.some(p => p.id === project.id);
   const tagList = Array.isArray(currentData.tags) ? currentData.tags : (currentData.tags as string || '').split(',').map(t => t.trim()).filter(Boolean);
   const links = isEditing ? (editData.links || []) : (project.links || []);
+
+  const requirementsText = Array.isArray(currentData.requirements) 
+    ? currentData.requirements.join('\n') 
+    : currentData.requirements;
 
 
   return (
@@ -216,15 +221,12 @@ export default function ProjectDetailsPage() {
                 </Card>
 
                  <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="font-headline text-xl">Progress</CardTitle>
+                        <span className="text-lg font-bold text-primary">{project.progress}%</span>
                     </CardHeader>
                     <CardContent>
-                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">{isCompleted ? "Completed" : "In Progress"}</span>
-                            <span className="text-lg font-bold text-primary">{project.progress}%</span>
-                         </div>
-                         <Progress value={project.progress} className="h-2" />
+                         <p className="text-sm text-muted-foreground">{project.progress === 100 ? "Completed" : "In Progress"}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -239,7 +241,7 @@ export default function ProjectDetailsPage() {
                         {isEditing ? (
                           <Textarea value={editData.requirements || ''} onChange={(e) => handleInputChange('requirements', e.target.value)} className="text-base min-h-48" />
                         ) : (
-                          <div className="text-base text-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-md border min-h-48">{currentData.requirements || 'No requirements specified.'}</div>
+                          <div className="text-base text-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-md border min-h-48">{requirementsText || 'No requirements specified.'}</div>
                         )}
                     </CardContent>
                 </Card>
@@ -328,5 +330,7 @@ export default function ProjectDetailsPage() {
       </div>
   );
 }
+
+    
 
     
