@@ -131,7 +131,7 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
                             max={100}
                             step={1}
                             onValueChange={(value) => setLocalProgress(value[0])}
-                            onValueChangeEnd={handleSliderCommit}
+                            onValueCommit={handleSliderCommit}
                         />
                       </PopoverContent>
                    )}
