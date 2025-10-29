@@ -1,4 +1,3 @@
-
 export interface Note {
   id: string;
   date: string;
@@ -12,16 +11,25 @@ export interface Link {
   description?: string;
 }
 
+export interface Requirement {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Project {
   id: string;
   title: string;
   description: string;
-  requirements: string;
+
+  // Allow string for backward compatibility, but prefer Requirement[]
+  requirements?: string | string[] | Requirement[];
+
   links: Link[];
-  logo: string;
+
+  logo?: string;
   progress: number;
   tags: string[];
+
   notes?: Note[];
 }
-
-    
