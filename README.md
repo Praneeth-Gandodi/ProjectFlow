@@ -1,5 +1,2 @@
-# Firebase Studio
+# This a project to save Project Ideas
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
