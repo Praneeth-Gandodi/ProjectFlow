@@ -369,7 +369,8 @@ export default function ProjectDetailsPage() {
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Entries</h4>
                   <div className="space-y-4 max-h-[360px] overflow-y-auto">
-                    {(project.notes || []).length > 0 ? [...project.notes].slice().reverse().map(note => (
+                    {(project.notes ?? []).length > 0 ? (
+                    [...(project.notes ?? [])].slice().reverse().map(note => (
                       <div key={note.id} className="flex gap-4 text-sm group">
                         <p className="font-mono text-muted-foreground whitespace-nowrap text-xs pt-1 w-24 flex-shrink-0">
                           {format(new Date(note.date), 'MMM dd')}
@@ -386,9 +387,13 @@ export default function ProjectDetailsPage() {
                           </Button>
                         </div>
                       </div>
-                    )) : (
-                      <p className="text-sm text-muted-foreground text-center py-6 border rounded-md">No log entries yet. Add your first note to start tracking progress.</p>
-                    )}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-6 border rounded-md">
+                      No log entries yet. Add your first note to start tracking progress.
+                    </p>
+                  )}
+
                   </div>
                 </div>
               </CardContent>
