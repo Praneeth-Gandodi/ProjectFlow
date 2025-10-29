@@ -42,18 +42,7 @@ export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
   
   const form = useForm<LinkFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: () => {
-      if (typeof window !== 'undefined') {
-        const savedDraft = localStorage.getItem(draftKey);
-        if (savedDraft) {
-          try {
-            return JSON.parse(savedDraft);
-          } catch(e) {
-            console.error("Failed to parse link draft", e);
-          }
-        }
-      }
-      return link ? {
+    defaultValues: link ? {
         title: link.title,
         url: link.url,
         description: link.description || '',
@@ -62,26 +51,24 @@ export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
         url: '',
         description: '',
       }
-    },
   });
 
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      localStorage.setItem(draftKey, JSON.stringify(value));
-    });
-    return () => subscription.unsubscribe();
-  }, [form, draftKey]);
-
-  useEffect(() => {
     if (isOpen) {
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        try {
-          form.reset(JSON.parse(savedDraft));
-        } catch (e) {
-          console.error("Failed to parse link draft", e);
-          form.reset(link ? { title: link.title, url: link.url, description: link.description || '' } : { title: '', url: '', description: '' });
+      let values: LinkFormData | null = null;
+      if (typeof window !== 'undefined') {
+        const savedDraft = localStorage.getItem(draftKey);
+        if (savedDraft) {
+          try {
+            values = JSON.parse(savedDraft);
+          } catch(e) {
+            console.error("Failed to parse link draft", e);
+          }
         }
+      }
+      
+      if (values) {
+        form.reset(values);
       } else if (link) {
         form.reset({
           title: link.title,
@@ -97,6 +84,17 @@ export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
       }
     }
   }, [link, isOpen, form, draftKey]);
+
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const subscription = form.watch((value) => {
+       if (Object.values(form.formState.dirtyFields).some(Boolean)) {
+         localStorage.setItem(draftKey, JSON.stringify(value));
+       }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey, isOpen]);
 
   const onSubmit = (values: LinkFormData) => {
     if (link) {
@@ -119,10 +117,10 @@ export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
   const handleClose = (open: boolean) => {
     if (!open) {
       const formValues = form.getValues();
-      const isDirty = Object.values(form.formState.dirtyFields).some(Boolean);
       const hasValues = formValues.title || formValues.url || formValues.description;
+      const isDefault = link ? (formValues.title === link.title && formValues.url === link.url && (formValues.description || '') === (link.description || '')) : !hasValues;
 
-      if (isDirty || hasValues) {
+      if (!isDefault) {
         const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
         if (confirmation) {
             setIsOpen(false);

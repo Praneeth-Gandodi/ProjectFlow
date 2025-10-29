@@ -54,37 +54,21 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: () => {
-      if (typeof window !== 'undefined') {
-        const savedDraft = localStorage.getItem(draftKey);
-        if (savedDraft) {
-          try {
-            return JSON.parse(savedDraft);
-          } catch (e) {
-            console.error("Failed to parse project draft", e);
-          }
-        }
-      }
-      if (project) {
-        return {
-          title: project.title,
-          description: project.description,
-          requirements: project.requirements,
-          logo: project.logo,
-          tags: project.tags?.join(', '),
-          links: project.links || [],
-        }
-      }
-      const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
-      return {
+    defaultValues: project ? {
+        title: project.title,
+        description: project.description,
+        requirements: project.requirements,
+        logo: project.logo,
+        tags: project.tags?.join(', '),
+        links: project.links || [],
+      } : {
         title: '',
         description: '',
         requirements: '1. ',
-        logo: defaultLogo,
+        logo: `https://picsum.photos/seed/${Date.now()}/200/200`,
         tags: '',
         links: [],
       }
-    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -93,37 +77,22 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   });
 
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      localStorage.setItem(draftKey, JSON.stringify(value));
-    });
-    return () => subscription.unsubscribe();
-  }, [form, draftKey]);
-
-  useEffect(() => {
     if (isOpen) {
-        const savedDraft = localStorage.getItem(draftKey);
-        let initialValues: ProjectFormData;
-
-        if (savedDraft) {
-          try {
-            initialValues = JSON.parse(savedDraft);
-          } catch(e) {
-             initialValues = project ? {
-              title: project.title,
-              description: project.description,
-              requirements: project.requirements,
-              logo: project.logo,
-              tags: project.tags?.join(', '),
-              links: project.links || [],
-            } : {
-              title: '',
-              description: '',
-              requirements: '1. ',
-              logo: `https://picsum.photos/seed/${Date.now()}/200/200`,
-              tags: '',
-              links: [],
+        let values: ProjectFormData | null = null;
+        if (typeof window !== 'undefined') {
+          const savedDraft = localStorage.getItem(draftKey);
+          if (savedDraft) {
+            try {
+              values = JSON.parse(savedDraft);
+            } catch (e) {
+              console.error("Failed to parse project draft", e);
             }
           }
+        }
+        
+        let initialValues: ProjectFormData;
+        if(values) {
+          initialValues = values;
         } else if (project) {
           initialValues = {
             title: project.title,
@@ -149,6 +118,16 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     }
   }, [project, isOpen, form, draftKey]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const subscription = form.watch((value) => {
+       if (Object.values(form.formState.dirtyFields).some(Boolean)) {
+        localStorage.setItem(draftKey, JSON.stringify(value));
+       }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey, isOpen]);
+
   const handleLogoUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -159,7 +138,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        form.setValue('logo', dataUrl);
+        form.setValue('logo', dataUrl, { shouldDirty: true });
         setLogoPreview(dataUrl);
       };
       reader.readAsDataURL(file);
@@ -183,7 +162,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
           }
       }
     }
-    form.setValue('requirements', value, { shouldValidate: true });
+    form.setValue('requirements', value, { shouldValidate: true, shouldDirty: true });
   };
 
   const onSubmit = (values: ProjectFormData) => {
@@ -222,10 +201,9 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   const handleClose = (open: boolean) => {
     if (!open) {
       const formValues = form.getValues();
-      const isDirty = Object.values(form.formState.dirtyFields).some(Boolean);
       const hasValues = formValues.title || formValues.description || formValues.requirements || formValues.tags || formValues.links?.length;
 
-      if(isDirty || hasValues) {
+      if(Object.values(form.formState.dirtyFields).some(Boolean)) {
         const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
         if (confirmation) {
             setIsOpen(false);
@@ -258,7 +236,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                 <FormLabel>Logo</FormLabel>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
-                    <Upload className="mr-2" /> Upload
+                    <Upload className="mr-2 h-4 w-4" /> Upload
                   </Button>
                   <Input 
                     ref={fileInputRef}
