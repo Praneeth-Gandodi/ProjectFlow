@@ -86,23 +86,28 @@ export default function Home() {
             </TabsList>
             <TabsContent value="ideas">
                <ProjectTab 
-                 ideas={filteredIdeas} 
-                 completed={filteredCompleted}
+                 projects={filteredIdeas} 
+                 setProjects={setIdeas}
                  setIdeas={setIdeas}
                  setCompleted={setCompleted}
+                 allProjects={ideas}
                  allIdeas={ideas}
                  allCompleted={completed}
+                 isCompletedTab={false}
+                 title="Ideas"
                />
             </TabsContent>
             <TabsContent value="completed">
                 <ProjectTab 
-                 ideas={filteredIdeas} 
-                 completed={filteredCompleted}
+                 projects={filteredCompleted} 
+                 setProjects={setCompleted}
                  setIdeas={setIdeas}
                  setCompleted={setCompleted}
+                 allProjects={completed}
                  allIdeas={ideas}
                  allCompleted={completed}
                  isCompletedTab={true}
+                 title="Completed"
                />
             </TabsContent>
             <TabsContent value="links">
