@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Upload } from 'lucide-react';
+import Image from 'next/image';
 
 interface ProjectFormProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   requirements: z.string().optional(),
-  logo: z.string().url('Must be a valid URL').or(z.literal('')),
+  logo: z.string().optional(),
   tags: z.string().optional(),
   links: z.array(z.object({
     title: z.string().min(1, 'Link title is required'),
@@ -42,6 +43,8 @@ const formSchema = z.object({
 
 export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted }: ProjectFormProps) {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,18 +74,38 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
             tags: project.tags?.join(', '),
             links: project.links || [],
           });
+          setLogoPreview(project.logo || null);
         } else {
+          const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
           form.reset({
             title: '',
             description: '',
             requirements: '1. ',
-            logo: `https://picsum.photos/seed/${Date.now()}/200/200`,
+            logo: defaultLogo,
             tags: '',
             links: [],
           });
+          setLogoPreview(defaultLogo);
         }
     }
   }, [project, isOpen, form]);
+
+  const handleLogoUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        form.setValue('logo', dataUrl);
+        setLogoPreview(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleRequirementsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let value = e.target.value;
@@ -90,7 +113,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     const lastLine = lines[lines.length - 1];
 
     if (lastLine.match(/^\d+\.\s*$/) && lines.length > 1 && lines[lines.length - 2].trim() !== '') {
-        // User pressed enter on an empty numbered line, so we remove it
         value = lines.slice(0, -1).join('\n');
     } else if (e.nativeEvent instanceof InputEvent && (e.nativeEvent.inputType === 'insertLineBreak' || e.nativeEvent.data === null)) {
       const lastLineNumberMatch = lines[lines.length - 2]?.match(/^(\d+)\./);
@@ -105,7 +127,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     form.setValue('requirements', value, { shouldValidate: true });
   };
 
-
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const setTarget = project?.source === 'completed' ? setCompleted : setIdeas;
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
@@ -115,8 +136,8 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       const updatedProject: Project = { 
           ...project, 
           ...values, 
-          tags,
           logo: values.logo || project.logo,
+          tags,
           links: values.links || [],
       };
       setTarget(prev => prev.map(p => (p.id === project.id ? updatedProject : p)));
@@ -126,8 +147,8 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       const newProject: Project = {
         id: `idea-${Date.now()}`,
         ...values,
-        requirements: values.requirements || '',
         logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
+        requirements: values.requirements || '',
         links: values.links || [],
         progress: 0,
         tags,
@@ -149,6 +170,39 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+             <div className="flex items-center gap-4">
+              {logoPreview && (
+                <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
+              )}
+              <div className="flex-1 space-y-2">
+                <FormLabel>Logo</FormLabel>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
+                    <Upload className="mr-2" /> Upload
+                  </Button>
+                  <Input 
+                    ref={fileInputRef}
+                    type="file" 
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="logo"
+                    render={({ field }) => (
+                      <FormItem className='flex-1'>
+                        <FormControl>
+                          <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="title"
@@ -188,19 +242,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       rows={5}
                       onChange={handleRequirementsChange}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="logo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Logo URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/logo.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

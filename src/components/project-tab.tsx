@@ -44,11 +44,11 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     let newTarget;
     
     if (to === 'ideas') {
-        newTarget = [...allIdeas, { ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }];
+        newTarget = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...allIdeas];
         setIdeas(newTarget);
         setCompleted(newSource);
     } else {
-        newTarget = [...allCompleted, { ...projectToMove, progress: 100 }];
+        newTarget = [{ ...projectToMove, progress: 100 }, ...allCompleted];
         setIdeas(newSource);
         setCompleted(newTarget);
     }

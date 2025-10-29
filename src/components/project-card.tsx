@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle, ExternalLink, Link as LinkIcon, Tag } from 'lucide-react';
 import { useDrag, useDrop } from 'react-dnd';
-import { useRef } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -20,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
 interface ProjectCardProps {
@@ -35,6 +35,9 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpdateProject, onMarkAsCompleted }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [isEditingProgress, setIsEditingProgress] = useState(false);
+  const [progressValue, setProgressValue] = useState(project.progress);
+
 
   const [{ isDragging }, drag, preview] = useDrag(() => ({
     type: 'project',
@@ -55,8 +58,13 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
 
   drag(drop(ref));
 
-  const handleProgressChange = (newProgress: number[]) => {
-    onUpdateProject({ ...project, progress: newProgress[0] });
+  const handleProgressBlur = () => {
+    setIsEditingProgress(false);
+    let newProgress = parseInt(String(progressValue), 10);
+    if (isNaN(newProgress) || newProgress < 0) newProgress = 0;
+    if (newProgress > 100) newProgress = 100;
+    setProgressValue(newProgress);
+    onUpdateProject({ ...project, progress: newProgress });
   };
   
   const logoSrc = project.logo || `https://picsum.photos/seed/${project.id}/64/64`;
@@ -74,7 +82,7 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
               alt={`${project.title} logo`}
               width={64}
               height={64}
-              className="rounded-lg border"
+              className="rounded-lg border object-cover"
             />
             <div className="flex-1">
               <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
@@ -152,17 +160,26 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
             <div className='w-full'>
               <div className="flex justify-between items-center mb-1">
                 <h4 className="font-semibold text-sm">Progress</h4>
-                <span className="text-sm font-bold text-primary">{project.progress}%</span>
+                 {isEditingProgress && source === 'ideas' ? (
+                  <Input
+                    type="number"
+                    value={progressValue}
+                    onChange={(e) => setProgressValue(Number(e.target.value))}
+                    onBlur={handleProgressBlur}
+                    onKeyDown={(e) => e.key === 'Enter' && handleProgressBlur()}
+                    className="w-20 h-8 text-right"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-bold text-primary cursor-pointer"
+                    onClick={() => source === 'ideas' && setIsEditingProgress(true)}
+                  >
+                    {source === 'completed' ? 100 : project.progress}%
+                  </span>
+                )}
               </div>
-              <Progress value={project.progress} className="h-2" />
-               <Slider
-                    defaultValue={[project.progress]}
-                    max={100}
-                    step={1}
-                    className="mt-3"
-                    onValueChange={handleProgressChange}
-                    disabled={source === 'completed'}
-                />
+              <Progress value={source === 'completed' ? 100 : project.progress} className="h-2" />
             </div>
             {source === 'ideas' && (
               <Button onClick={() => onMarkAsCompleted(project)} variant="outline" size="sm" className="w-full">
