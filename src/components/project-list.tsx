@@ -9,7 +9,6 @@ interface ProjectListProps {
   title: string;
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
-  allProjects: Project[];
   onEdit: (project: Project, source: 'ideas' | 'completed') => void;
   columnId: 'ideas' | 'completed';
   onDropItem: (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => void;

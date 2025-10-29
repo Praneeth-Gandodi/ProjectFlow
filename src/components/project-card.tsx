@@ -58,6 +58,8 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
   const handleProgressChange = (newProgress: number[]) => {
     onUpdateProject({ ...project, progress: newProgress[0] });
   };
+  
+  const logoSrc = project.logo || `https://picsum.photos/seed/${project.id}/64/64`;
 
   return (
     <div ref={preview} style={{ opacity: isDragging ? 0.5 : 1 }}>
@@ -68,12 +70,11 @@ export function ProjectCard({ project, onEdit, onDelete, moveCard, source, onUpd
         <CardHeader className="pl-10 pr-12">
            <div className="flex items-start gap-4">
             <Image
-              src={project.logo}
+              src={logoSrc}
               alt={`${project.title} logo`}
               width={64}
               height={64}
               className="rounded-lg border"
-              data-ai-hint="logo"
             />
             <div className="flex-1">
               <CardTitle className="font-headline text-xl">{project.title}</CardTitle>

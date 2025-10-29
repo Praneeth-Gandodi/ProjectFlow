@@ -12,14 +12,13 @@ interface ProjectTabProps {
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
   setCompleted: React.Dispatch<React.SetStateAction<Project[]>>;
-  allProjects: Project[];
   allIdeas: Project[];
   allCompleted: Project[];
   isCompletedTab: boolean;
   title: string;
 }
 
-export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allProjects, allIdeas, allCompleted, isCompletedTab, title }: ProjectTabProps) {
+export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allIdeas, allCompleted, isCompletedTab, title }: ProjectTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<(Project & { source: 'ideas' | 'completed' }) | null>(null);
 
@@ -68,7 +67,6 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allP
             title={title}
             projects={projects}
             setProjects={setProjects}
-            allProjects={allProjects}
             onEdit={handleEditProject}
             columnId={isCompletedTab ? 'completed' : 'ideas'}
             onDropItem={moveProject}

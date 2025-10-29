@@ -7,9 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectTab } from '@/components/project-tab';
 import { LinkTab } from '@/components/link-tab';
 import type { Project, Link } from './types';
-import { INITIAL_IDEAS, INITIAL_COMPLETED, INITIAL_LINKS } from './data';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { INITIAL_IDEAS, INITIAL_COMPLETED, INITIAL_LINKS } from './data';
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -90,7 +90,6 @@ export default function Home() {
                  setProjects={setIdeas}
                  setIdeas={setIdeas}
                  setCompleted={setCompleted}
-                 allProjects={ideas}
                  allIdeas={ideas}
                  allCompleted={completed}
                  isCompletedTab={false}
@@ -103,7 +102,6 @@ export default function Home() {
                  setProjects={setCompleted}
                  setIdeas={setIdeas}
                  setCompleted={setCompleted}
-                 allProjects={completed}
                  allIdeas={ideas}
                  allCompleted={completed}
                  isCompletedTab={true}
