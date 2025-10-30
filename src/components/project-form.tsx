@@ -46,30 +46,56 @@ type ProjectFormData = z.infer<typeof formSchema>;
 
 const getDraftKey = (projectId: string | null) => `project_draft_${projectId || 'new'}`;
 
+/** Convert Project.requirements (string | string[] | undefined) -> single multiline string for form */
+const requirementsToString = (req: Project['requirements']): string => {
+  if (!req) return '';
+  if (Array.isArray(req)) return req.join('\n');
+  return String(req);
+};
+
+/** Convert multiline string -> Project.requirements (string | string[]) */
+const requirementsFromString = (s?: string): string | string[] => {
+  if (!s) return '';
+  const lines = s.split(/\r?\n/).map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
+  if (lines.length <= 1) {
+    return lines[0] ?? '';
+  }
+  return lines;
+};
+
 export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted }: ProjectFormProps) {
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const draftKey = getDraftKey(project?.id ?? null);
 
+  // initial default values
+  const computeDefaults = (): ProjectFormData => {
+    if (project) {
+      return {
+        title: project.title,
+        description: project.description ?? '',
+        requirements: requirementsToString(project.requirements),
+        logo: project.logo ?? '',
+        tags: Array.isArray(project.tags) ? project.tags.join(', ') : (project.tags as any) ?? '',
+        links: project.links ?? [],
+      };
+    }
+    const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
+    return {
+      title: '',
+      description: '',
+      requirements: '1. ',
+      logo: defaultLogo,
+      tags: '',
+      links: [],
+    };
+  };
+
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: project ? {
-        title: project.title,
-        description: project.description,
-        requirements: project.requirements,
-        logo: project.logo,
-        tags: project.tags?.join(', '),
-        links: project.links || [],
-      } : {
-        title: '',
-        description: '',
-        requirements: '1. ',
-        logo: `https://picsum.photos/seed/${Date.now()}/200/200`,
-        tags: '',
-        links: [],
-      }
+    defaultValues: computeDefaults(),
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -77,56 +103,49 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     name: 'links',
   });
 
+  // Reset form when dialog opens (load draft if present)
   useEffect(() => {
-    if (isOpen) {
-        let values: ProjectFormData | null = null;
-        if (typeof window !== 'undefined') {
-          const savedDraft = localStorage.getItem(draftKey);
-          if (savedDraft) {
-            try {
-              values = JSON.parse(savedDraft);
-            } catch (e) {
-              console.error("Failed to parse project draft", e);
-            }
-          }
-        }
-        
-        let initialValues: ProjectFormData;
-        if(values) {
-          initialValues = values;
-        } else if (project) {
-          initialValues = {
-            title: project.title,
-            description: project.description || '',
-            requirements: project.requirements,
-            logo: project.logo,
-            tags: project.tags?.join(', '),
-            links: project.links || [],
-          };
-        } else {
-          const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
-          initialValues = {
-            title: '',
-            description: '',
-            requirements: '1. ',
-            logo: defaultLogo,
-            tags: '',
-            links: [],
-          };
-        }
-        form.reset(initialValues);
-        setLogoPreview(initialValues.logo || null);
-    }
-  }, [project, isOpen, form, draftKey]);
+    if (!isOpen) return;
 
+    let initialValues: ProjectFormData = computeDefaults();
+
+    if (typeof window !== 'undefined') {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft) as Partial<ProjectFormData>;
+          // merge parsed with defaults (parsed may omit fields)
+          initialValues = { ...initialValues, ...parsed };
+        } catch (e) {
+          console.error('Failed to parse project draft', e);
+        }
+      }
+    }
+
+    form.reset(initialValues);
+    setLogoPreview(initialValues.logo ?? null);
+    // ensure field array has values (react-hook-form needs it)
+    if (!initialValues.links || initialValues.links.length === 0) {
+      // don't append here; field array will handle append when user adds
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, project, draftKey]);
+
+  // Auto-save draft while the dialog is open (debounced-ish by controlled updates)
   useEffect(() => {
     if (!isOpen) return;
     const subscription = form.watch((value) => {
-       if (Object.values(form.formState.dirtyFields).some(Boolean)) {
-        localStorage.setItem(draftKey, JSON.stringify(value));
-       }
+      // Save draft only when there are dirty fields
+      if (Object.keys(form.formState.dirtyFields).length > 0) {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify(value));
+        } catch (e) {
+          console.error('Failed to save draft', e);
+        }
+      }
     });
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, draftKey, isOpen]);
 
   const handleLogoUploadClick = () => {
@@ -139,7 +158,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        form.setValue('logo', dataUrl, { shouldDirty: true });
+        form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
         setLogoPreview(dataUrl);
       };
       reader.readAsDataURL(file);
@@ -147,23 +166,8 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   };
 
   const handleRequirementsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    let value = e.target.value;
-    const lines = value.split('\n');
-    const lastLine = lines[lines.length - 1];
-
-    if (lastLine.match(/^\d+\.\s*$/) && lines.length > 1 && lines[lines.length - 2].trim() !== '') {
-        value = lines.slice(0, -1).join('\n');
-    } else if (e.nativeEvent instanceof InputEvent && (e.nativeEvent.inputType === 'insertLineBreak' || e.nativeEvent.data === null)) {
-      const lastLineNumberMatch = lines[lines.length - 2]?.match(/^(\d+)\./);
-      if (lastLineNumberMatch) {
-          const nextNumber = parseInt(lastLineNumberMatch[1], 10) + 1;
-          if(lines[lines.length-1].trim() === ''){
-               lines[lines.length-1] = `${nextNumber}. `;
-               value = lines.join('\n');
-          }
-      }
-    }
-    form.setValue('requirements', value, { shouldValidate: true, shouldDirty: true });
+    // keep the raw text for the form; client-side helper can auto-number if you want
+    form.setValue('requirements', e.target.value, { shouldValidate: true, shouldDirty: true });
   };
 
   const onSubmit = (values: ProjectFormData) => {
@@ -172,13 +176,14 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
     if (project) {
       // Editing existing project
-      const updatedProject: Project = { 
-          ...project, 
-          ...values,
-          description: values.description || '',
-          logo: values.logo || project.logo,
-          tags,
-          links: values.links || [],
+      const updatedProject: Project = {
+        ...project,
+        title: values.title,
+        description: values.description || '',
+        logo: values.logo || project.logo,
+        requirements: requirementsFromString(values.requirements),
+        links: values.links || [],
+        tags,
       };
       setTarget(prev => prev.map(p => (p.id === project.id ? updatedProject : p)));
       toast({ title: 'Project updated!' });
@@ -189,7 +194,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         title: values.title,
         description: values.description || '',
         logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
-        requirements: values.requirements || '',
+        requirements: requirementsFromString(values.requirements),
         links: values.links || [],
         progress: 0,
         tags,
@@ -203,10 +208,10 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      if (Object.values(form.formState.dirtyFields).some(Boolean)) {
+      if (Object.keys(form.formState.dirtyFields).length > 0) {
         const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
         if (confirmation) {
-           setIsOpen(false);
+          setIsOpen(false);
         }
       } else {
         setIsOpen(false);
@@ -217,7 +222,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
     }
   };
 
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
@@ -227,6 +231,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
             {project ? 'Make changes to your project.' : 'Fill in the details for your new project idea.'} Your draft is auto-saved.
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow overflow-hidden flex flex-col">
             <Tabs defaultValue="general" className="flex-grow flex flex-col overflow-hidden">
@@ -235,7 +240,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="links">Links</TabsTrigger>
               </TabsList>
-              
+
               <div className="flex-grow overflow-y-auto pt-4 pr-1">
                 <TabsContent value="general" className="space-y-6 px-2">
                   <FormField
@@ -264,23 +269,39 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       </FormItem>
                     )}
                   />
-                   <div className="flex items-center gap-4 pt-4 pb-6">
+
+                  <div className="flex items-center gap-4 pt-4 pb-6">
                     {logoPreview && (
-                      <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-lg border object-cover"/>
+                      <Image
+                        src={
+                          logoPreview.startsWith('data:') || logoPreview.startsWith('http')
+                            ? logoPreview
+                            : '/placeholder.png'
+                        }
+                        alt="Logo preview"
+                        width={80}
+                        height={80}
+                        className="rounded-lg border object-cover"
+                        unoptimized
+                      />
                     )}
+
                     <div className="flex-1 space-y-2">
                       <FormLabel>Logo</FormLabel>
                       <div className="flex gap-2">
                         <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
                           <Upload className="mr-2 h-4 w-4" /> Upload
                         </Button>
-                        <Input 
+
+                        {/* native file input (hidden) */}
+                        <input
                           ref={fileInputRef}
-                          type="file" 
+                          type="file"
                           className="hidden"
                           accept="image/*"
                           onChange={handleFileChange}
                         />
+
                         <FormField
                           control={form.control}
                           name="logo"
@@ -306,11 +327,14 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       <FormItem>
                         <FormLabel>Requirements</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="1. First requirement..." 
-                            {...field} 
+                          <Textarea
+                            placeholder="1. First requirement..."
+                            {...field}
                             rows={8}
-                            onChange={handleRequirementsChange}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleRequirementsChange(e);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -335,50 +359,51 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                 </TabsContent>
 
                 <TabsContent value="links" className="px-2">
-                    <div className="space-y-4">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-                          <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`links.${index}.title`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Link Title</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g., Figma Mockups" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`links.${index}.url`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>URL</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="https://..." {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <Button type="button" variant="ghost" size="icon" className="mt-7 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Remove Link</span>
-                          </Button>
+                  <div className="space-y-4">
+                    {fields.map((f, index) => (
+                      <div key={f.id} className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`links.${index}.title`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Link Title</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., Figma Mockups" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`links.${index}.url`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>URL</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="https://..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                      ))}
-                    </div>
-                    <Button type="button" variant="outline" size="sm" className="mt-4 mb-4" onClick={() => append({ title: '', url: '' })}>
-                      <Plus className="mr-2 h-4 w-4" /> Add Link
-                    </Button>
+                        <Button type="button" variant="ghost" size="icon" className="mt-7 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remove Link</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" className="mt-4 mb-4" onClick={() => append({ title: '', url: '' })}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Link
+                  </Button>
                 </TabsContent>
               </div>
             </Tabs>
+
             <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="ghost" onClick={() => handleClose(false)}>Cancel</Button>
               <Button type="submit">Save</Button>
