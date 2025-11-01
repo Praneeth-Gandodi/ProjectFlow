@@ -56,5 +56,12 @@ Then open the localhost URL from the terminal.
 This project was made possible with the collaboration and inspiration of the following tools and platforms:
 
 - **Firebase Studio** — for providing the initial blueprint and backend-ready structure.  
+- **DeepSeek AI** - For invaluable assistance with code generation and development guidance that made this website possible.
 - **ChatGPT (OpenAI)** — for all code corrections, logic structuring, feature additions, and UI/UX refinements.  
 - **Copilot** — for generating the favicon and offering intelligent code completions.
+
+---
+
+## Special Thanks
+
+A heartfelt thank you to all the AI tools and platforms that contributed to this project's development. Your collective assistance with code generation, debugging, design suggestions, and feature implementation made this website possible🙏.
