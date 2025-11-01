@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, Github } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -36,6 +36,7 @@ const formSchema = z.object({
   requirements: z.string().optional(),
   logo: z.string().optional(),
   tags: z.string().optional(),
+  repoUrl: z.string().optional(),
   links: z.array(z.object({
     title: z.string().min(1, 'Link title is required'),
     url: z.string().url('Link URL must be a valid URL'),
@@ -73,12 +74,14 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   // initial default values
   const computeDefaults = (): ProjectFormData => {
     if (project) {
+      const pAny = project as any;
       return {
         title: project.title,
         description: project.description ?? '',
         requirements: requirementsToString(project.requirements),
         logo: project.logo ?? '',
         tags: Array.isArray(project.tags) ? project.tags.join(', ') : (project.tags as any) ?? '',
+        repoUrl: pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
         links: project.links ?? [],
       };
     }
@@ -89,6 +92,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       requirements: '1. ',
       logo: defaultLogo,
       tags: '',
+      repoUrl: '',
       links: [],
     };
   };
@@ -176,6 +180,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
 
     if (project) {
       // Editing existing project
+      const pAny = { ...project } as any;
       const updatedProject: Project = {
         ...project,
         title: values.title,
@@ -184,6 +189,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         requirements: requirementsFromString(values.requirements),
         links: values.links || [],
         tags,
+        repoUrl: values.repoUrl || pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
       };
       setTarget(prev => prev.map(p => (p.id === project.id ? updatedProject : p)));
       toast({ title: 'Project updated!' });
@@ -198,6 +204,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         links: values.links || [],
         progress: 0,
         tags,
+        repoUrl: values.repoUrl || '',
       };
       setIdeas(prev => [newProject, ...prev]);
       toast({ title: 'New project added!' });
@@ -264,6 +271,27 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea placeholder="Describe the project..." {...field} rows={4} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* GitHub Repository URL Field */}
+                  <FormField
+                    control={form.control}
+                    name="repoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Github className="h-4 w-4" />
+                          GitHub Repository URL
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="https://github.com/username/repository" 
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

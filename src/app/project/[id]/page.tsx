@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,11 @@ import {
   Lock,
   Key as KeyIcon,
   Unlock,
-  Copy
+  Copy,
+  Globe,
+  Edit3,
+  GitCommit,
+  Github
 } from 'lucide-react';
 import Image from 'next/image';
 import type { Project, Note, Link as LinkType } from '@/app/types';
@@ -34,7 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { INITIAL_IDEAS, INITIAL_COMPLETED } from '@/app/data';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface APIKey {
   id: string;
@@ -59,26 +63,28 @@ export default function ProjectDetailsPage() {
 
   // Editing fields
   const [editDescription, setEditDescription] = useState('');
-  const [editTags, setEditTags] = useState('');
   const [editRequirementsText, setEditRequirementsText] = useState('');
   const [editLinks, setEditLinks] = useState<LinkType[]>([]);
 
   // API Keys local state
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
-  // session unlocked flag for the current project
   const [isKeysUnlocked, setIsKeysUnlocked] = useState(false);
-  // per-key unmask state (only meaningful when unlocked)
   const [unmaskedKeys, setUnmaskedKeys] = useState<Record<string, boolean>>({});
-  // key detail modal
   const [selectedKey, setSelectedKey] = useState<APIKey | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [editingKey, setEditingKey] = useState<APIKey | null>(null);
+
+  // Links state
+  const [selectedLink, setSelectedLink] = useState<LinkType | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLink, setEditingLink] = useState<LinkType | null>(null);
 
   // Modals
-  const [showPinModal, setShowPinModal] = useState(false); // used for both set/unlock flows (mode controlled)
+  const [showPinModal, setShowPinModal] = useState(false);
   const [pinMode, setPinMode] = useState<'set' | 'unlock'>('unlock');
-  const [pinInput, setPinInput] = useState('');
-  const [pinConfirmInput, setPinConfirmInput] = useState('');
-  const [showPinInput, setShowPinInput] = useState(true);
+  const [pinInput, setPinInput] = useState(['', '', '', '']);
+  const [pinConfirmInput, setPinConfirmInput] = useState(['', '', '', '']);
+  const [showPinInput, setShowPinInput] = useState(false);
 
   const [showAddKeyModal, setShowAddKeyModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -86,11 +92,22 @@ export default function ProjectDetailsPage() {
   const [newKeyValue, setNewKeyValue] = useState('');
   const [newKeyDescription, setNewKeyDescription] = useState('');
 
+  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
+  const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkDescription, setNewLinkDescription] = useState('');
+
   // Project log / new note
   const [newNote, setNewNote] = useState('');
 
+  // Context menu for project icon
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
   const { font } = useContext(ProfileContext);
   const isDataLoaded = isIdeasLoaded && isCompletedLoaded;
+
+  const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // ---------- Helper: validate website URL ----------
   const validateWebsiteUrl = (url: string): boolean => {
@@ -107,7 +124,6 @@ export default function ProjectDetailsPage() {
     if (!website) return undefined;
     try {
       const domain = new URL(website).hostname;
-      // Google favicon service (works in browser); next/image not used to avoid host config
       return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
     } catch {
       return undefined;
@@ -134,23 +150,40 @@ export default function ProjectDetailsPage() {
   useEffect(() => {
     if (!project) return;
     setEditDescription(project.description ?? '');
-    setEditTags(Array.isArray(project.tags) ? project.tags.join(', ') : (project.tags as any) ?? '');
     setEditRequirementsText(requirementsToText(project.requirements));
     setEditLinks(project.links ?? []);
     const pAny = project as any;
     setApiKeys(Array.isArray(pAny.apiKeys) ? (pAny.apiKeys as APIKey[]) : []);
-    // reset per-key unmask
     setUnmaskedKeys({});
-    // check session unlock
     const unlocked = sessionStorage.getItem(`projectflow-unlock-${project.id}`) === 'true';
     setIsKeysUnlocked(!!unlocked);
   }, [project]);
 
-  // derived lines for numbering gutter
-  const requirementLines = useMemo(() => {
-    const lines = editRequirementsText.split(/\r?\n/);
-    if (lines.length === 1 && lines[0].trim() === '') return [''];
-    return lines;
+  // Auto-number requirements with proper formatting
+  const formatRequirementsText = (text: string) => {
+    const lines = text.split('\n');
+    const formattedLines = lines.map((line, index) => {
+      // Remove existing numbers and trim
+      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      return cleanLine ? `${index + 1}. ${cleanLine}` : '';
+    });
+    return formattedLines.join('\n');
+  };
+
+  const handleRequirementsChange = (text: string) => {
+    // Store the raw text without auto-numbering for editing
+    const lines = text.split('\n');
+    const cleanLines = lines.map(line => line.replace(/^\d+\.\s*/, '').trim());
+    setEditRequirementsText(cleanLines.join('\n'));
+  };
+
+  // Get display text with auto-numbering
+  const requirementsDisplayText = useMemo(() => {
+    const lines = editRequirementsText.split('\n');
+    return lines.map((line, index) => {
+      const cleanLine = line.trim();
+      return cleanLine ? `${index + 1}. ${cleanLine}` : '';
+    }).join('\n');
   }, [editRequirementsText]);
 
   const getProjectPin = (proj: Project | null) => {
@@ -159,7 +192,7 @@ export default function ProjectDetailsPage() {
     return pAny.apiKeyPin ?? null;
   };
 
-  // persist helper (update the project inside ideas/completed arrays)
+  // persist helper
   const persistProject = (updatedProj: Project) => {
     if (!updatedProj) return;
     const isCompletedProject = completed.some(p => p.id === updatedProj.id);
@@ -168,7 +201,7 @@ export default function ProjectDetailsPage() {
     setProject(updatedProj);
   };
 
-  // save handler - saves all editable fields back into the project
+  // save handler
   const handleSave = () => {
     if (!project) return;
 
@@ -179,7 +212,6 @@ export default function ProjectDetailsPage() {
 
     const pAny = { ...(project as any) };
     pAny.description = editDescription;
-    pAny.tags = editTags.split(',').map(t => t.trim()).filter(Boolean);
     pAny.requirements = requirementsArray.length > 0 ? requirementsArray : '';
     pAny.links = editLinks;
     pAny.apiKeys = apiKeys;
@@ -187,25 +219,33 @@ export default function ProjectDetailsPage() {
     const updatedProject = pAny as Project;
     persistProject(updatedProject);
 
-    toast({ title: 'Project Saved!', description: 'Your changes have been saved.' });
+    toast({ 
+      title: 'Project Saved!', 
+      description: 'Your changes have been saved successfully.',
+    });
   };
 
   // revert local edits to saved project
   const handleRevert = () => {
     if (!project) return;
     setEditDescription(project.description ?? '');
-    setEditTags(Array.isArray(project.tags) ? project.tags.join(', ') : (project.tags as any) ?? '');
     setEditRequirementsText(requirementsToText(project.requirements));
     setEditLinks(project.links ?? []);
     const pAny = project as any;
     setApiKeys(Array.isArray(pAny.apiKeys) ? (pAny.apiKeys as APIKey[]) : []);
-    toast({ title: 'Edits reverted' });
+    setEditingKey(null);
+    setEditingLink(null);
+    toast({ title: 'Changes reverted', description: 'All edits have been discarded.' });
   };
 
   // notes handlers
   const handleAddNote = () => {
     if (!project || !newNote.trim()) return;
-    const note: Note = { id: `note-${Date.now()}`, date: new Date().toISOString(), content: newNote.trim() };
+    const note: Note = { 
+      id: `note-${Date.now()}`, 
+      date: new Date().toISOString(), 
+      content: newNote.trim() 
+    };
 
     const pAny = { ...(project as any) };
     pAny.notes = [...(project.notes || []), note];
@@ -215,7 +255,10 @@ export default function ProjectDetailsPage() {
 
     setProject(updatedProject);
     setNewNote('');
-    toast({ title: 'Note added!' });
+    toast({ 
+      title: 'Note added!', 
+      description: 'Your note has been saved to the project log.',
+    });
   };
 
   const handleDeleteNote = (noteId: string) => {
@@ -227,10 +270,10 @@ export default function ProjectDetailsPage() {
     const updatedProject = pAny as Project;
     persistProject(updatedProject);
     setProject(updatedProject);
-    toast({ title: 'Note deleted.' });
+    toast({ title: 'Note deleted', description: 'The note has been removed.' });
   };
 
-  // Links helpers: persist on change
+  // Links helpers
   const persistLinksQuick = (linksArr: LinkType[]) => {
     setEditLinks(linksArr);
     if (!project) return;
@@ -243,7 +286,6 @@ export default function ProjectDetailsPage() {
   const handleAddApiKeyDirect = (key: APIKey) => {
     const updated = [...apiKeys, key];
     setApiKeys(updated);
-    // persist into project object immediately
     if (!project) return;
     const pAny = { ...(project as any) };
     pAny.apiKeys = updated;
@@ -257,12 +299,11 @@ export default function ProjectDetailsPage() {
     const pAny = { ...(project as any) };
     pAny.apiKeys = updated;
     persistProject(pAny as Project);
-    toast({ title: 'API key removed' });
+    toast({ title: 'API key removed', description: 'The API key has been deleted.' });
   };
 
-  const handleUpdateApiKey = (idx: number, partial: Partial<APIKey>) => {
-    const updated = [...apiKeys];
-    updated[idx] = { ...updated[idx], ...partial };
+  const handleUpdateApiKey = (keyId: string, updates: Partial<APIKey>) => {
+    const updated = apiKeys.map(k => k.id === keyId ? { ...k, ...updates } : k);
     setApiKeys(updated);
     if (!project) return;
     const pAny = { ...(project as any) };
@@ -276,84 +317,123 @@ export default function ProjectDetailsPage() {
       await navigator.clipboard.writeText(text);
       toast({ title: 'Copied to clipboard' });
     } catch (err) {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        toast({ title: 'Copied to clipboard' });
-      } catch {
-        toast({ title: 'Copy failed' });
-      }
+      toast({ title: 'Copy failed', variant: 'destructive' });
     }
   };
 
-  // PIN modal flows
+  // PIN modal flows with block-style input
   const openSetPinModal = () => {
     setPinMode('set');
-    setPinInput('');
-    setPinConfirmInput('');
-    setShowPinInput(true);
+    setPinInput(['', '', '', '']);
+    setPinConfirmInput(['', '', '', '']);
+    setShowPinInput(false);
     setShowPinModal(true);
+    // Focus first input
+    setTimeout(() => {
+      pinInputRefs.current[0]?.focus();
+    }, 100);
   };
 
   const openUnlockPinModal = () => {
     setPinMode('unlock');
-    setPinInput('');
-    setShowPinInput(true);
+    setPinInput(['', '', '', '']);
+    setShowPinInput(false);
     setShowPinModal(true);
+    // Focus first input
+    setTimeout(() => {
+      pinInputRefs.current[0]?.focus();
+    }, 100);
   };
 
-  const validateNumericPin = (val: string) => {
-    // only digits allowed
-    return /^\d*$/.test(val);
+  const handlePinInputChange = (index: number, value: string, isConfirm = false) => {
+    if (!/^\d?$/.test(value)) return; // Only allow digits
+    
+    const targetArray = isConfirm ? pinConfirmInput : pinInput;
+    const newArray = [...targetArray];
+    newArray[index] = value;
+    
+    if (isConfirm) {
+      setPinConfirmInput(newArray);
+    } else {
+      setPinInput(newArray);
+    }
+
+    // Auto-focus next input
+    if (value && index < 3) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index: number, e: React.KeyboardEvent, isConfirm = false) => {
+    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+      // Move to previous input on backspace
+      pinInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const getPinValue = (isConfirm = false) => {
+    return (isConfirm ? pinConfirmInput : pinInput).join('');
   };
 
   const confirmSetPin = () => {
-    const pin = pinInput.trim();
-    const confirm = pinConfirmInput.trim();
+    const pin = getPinValue();
+    const confirm = getPinValue(true);
 
-    if (!/^\d{4,6}$/.test(pin)) {
-      toast({ title: 'PIN must be numeric and 4–6 digits' });
+    if (!/^\d{4}$/.test(pin)) {
+      toast({ 
+        title: 'Invalid PIN', 
+        description: 'PIN must be exactly 4 digits',
+        variant: 'destructive'
+      });
       return;
     }
     if (pin !== confirm) {
-      toast({ title: 'PINs do not match' });
+      toast({ 
+        title: 'PINs do not match', 
+        description: 'Please make sure both PINs are identical',
+        variant: 'destructive'
+      });
       return;
     }
     if (!project) return;
 
     const pAny = { ...(project as any) };
     pAny.apiKeyPin = pin;
-    // persist pin
     persistProject(pAny as Project);
-    // unlock session
     sessionStorage.setItem(`projectflow-unlock-${project.id}`, 'true');
     setIsKeysUnlocked(true);
     setShowPinModal(false);
-    setPinInput('');
-    setPinConfirmInput('');
-    toast({ title: 'PIN set', description: 'Your project API PIN has been saved locally.' });
+    setPinInput(['', '', '', '']);
+    setPinConfirmInput(['', '', '', '']);
+    toast({ 
+      title: 'PIN Set', 
+      description: 'Your project API PIN has been saved securely.',
+    });
   };
 
   const confirmUnlockPin = () => {
     if (!project) return;
     const storedPin = getProjectPin(project);
     if (!storedPin) {
-      // no pin exists, open set modal instead
       openSetPinModal();
       return;
     }
-    if (pinInput === storedPin) {
+    const enteredPin = getPinValue();
+    if (enteredPin === storedPin) {
       sessionStorage.setItem(`projectflow-unlock-${project.id}`, 'true');
       setIsKeysUnlocked(true);
       setShowPinModal(false);
-      setPinInput('');
-      toast({ title: 'Unlocked', description: 'API keys are visible this session.' });
+      setPinInput(['', '', '', '']);
+      toast({ 
+        title: 'Unlocked', 
+        description: 'API keys are now visible for this session.',
+      });
     } else {
-      toast({ title: 'Incorrect PIN', description: 'Try again.' });
+      toast({ 
+        title: 'Incorrect PIN', 
+        description: 'Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -366,30 +446,30 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  // Add Key confirm with validation (updated to include description)
+  // Add Key confirm with validation
   const confirmAddKey = () => {
     if (!project) return;
     if (!newKeyName.trim()) {
-      toast({ title: 'Name required', description: 'Provide a name for this API key' });
-      return;
-    }
-    if (!newKeyWebsite.trim()) {
-      toast({ title: 'Website required', description: 'Provide the website for this service' });
-      return;
-    }
-    if (!validateWebsiteUrl(newKeyWebsite)) {
-      toast({ title: 'Invalid website', description: 'Please enter a valid URL starting with http:// or https://', variant: 'destructive' });
+      toast({ 
+        title: 'Name required', 
+        description: 'Please provide a name for this API key',
+        variant: 'destructive'
+      });
       return;
     }
     if (!newKeyValue.trim()) {
-      toast({ title: 'API key required', description: 'Provide the actual API key value' });
+      toast({ 
+        title: 'API key required', 
+        description: 'Please provide the actual API key value',
+        variant: 'destructive'
+      });
       return;
     }
 
     const newKey: APIKey = {
       id: `apikey-${Date.now()}`,
       name: newKeyName.trim(),
-      website: newKeyWebsite.trim(),
+      website: newKeyWebsite.trim() || undefined,
       key: newKeyValue.trim(),
       description: newKeyDescription.trim() || undefined,
     };
@@ -400,10 +480,84 @@ export default function ProjectDetailsPage() {
     setNewKeyValue('');
     setNewKeyDescription('');
     setShowAddKeyModal(false);
-    toast({ title: 'API Key added', description: 'Your API key has been securely stored.' });
+    toast({ 
+      title: 'API Key Added', 
+      description: 'Your API key has been securely stored.',
+    });
   };
 
-  // Toggle individual unmask (only when unlocked)
+  // Update Key
+  const confirmUpdateKey = () => {
+    if (!editingKey) return;
+    
+    handleUpdateApiKey(editingKey.id, {
+      name: editingKey.name,
+      website: editingKey.website,
+      key: editingKey.key,
+      description: editingKey.description,
+    });
+    
+    setEditingKey(null);
+    toast({ 
+      title: 'API Key Updated', 
+      description: 'Your changes have been saved.',
+    });
+  };
+
+  // Add Link
+  const confirmAddLink = () => {
+    if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
+      toast({ 
+        title: 'Title and URL required', 
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!validateWebsiteUrl(newLinkUrl)) {
+      toast({ 
+        title: 'Invalid URL', 
+        description: 'Please enter a valid URL starting with http:// or https://',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newLink: LinkType = {
+      id: `link-${Date.now()}`,
+      title: newLinkTitle.trim(),
+      url: newLinkUrl.trim(),
+      description: newLinkDescription.trim() || undefined,
+    };
+
+    persistLinksQuick([...editLinks, newLink]);
+    setNewLinkTitle('');
+    setNewLinkUrl('');
+    setNewLinkDescription('');
+    setShowAddLinkModal(false);
+    toast({ 
+      title: 'Link Added', 
+      description: 'Your link has been saved.',
+    });
+  };
+
+  // Update Link
+  const confirmUpdateLink = () => {
+    if (!editingLink) return;
+
+    const updatedLinks = editLinks.map(link => 
+      link.id === editingLink.id ? editingLink : link
+    );
+    
+    persistLinksQuick(updatedLinks);
+    setEditingLink(null);
+    toast({ 
+      title: 'Link Updated', 
+      description: 'Your changes have been saved.',
+    });
+  };
+
+  // Toggle individual unmask
   const toggleUnmaskKey = (id: string) => {
     if (!isKeysUnlocked) {
       promptUnlockOrSet();
@@ -412,7 +566,7 @@ export default function ProjectDetailsPage() {
     setUnmaskedKeys(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // copy a key (requires unlocked)
+  // copy a key
   const handleCopyKey = (k: APIKey) => {
     if (!isKeysUnlocked) {
       promptUnlockOrSet();
@@ -432,17 +586,79 @@ export default function ProjectDetailsPage() {
     setShowKeyModal(false);
   };
 
-  // Toggle reveal attempt triggers PIN prompt if locked
-  const handleRevealAttempt = () => {
-    if (isKeysUnlocked) return;
-    promptUnlockOrSet();
+  // open link detail modal
+  const openLinkModal = (link: LinkType) => {
+    setSelectedLink(link);
   };
+
+  const closeLinkModal = () => {
+    setSelectedLink(null);
+  };
+
+  // Start editing a key
+  const startEditingKey = (key: APIKey) => {
+    if (!isKeysUnlocked) {
+      promptUnlockOrSet();
+      return;
+    }
+    setEditingKey({ ...key });
+  };
+
+  // Start editing a link
+  const startEditingLink = (link: LinkType) => {
+    setEditingLink({ ...link });
+  };
+
+  // Delete link
+  const handleDeleteLink = (linkId: string) => {
+    const updated = editLinks.filter(link => link.id !== linkId);
+    persistLinksQuick(updated);
+    toast({ title: 'Link deleted' });
+  };
+
+  // Context menu for project icon
+  const handleProjectIconContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    setShowContextMenu(true);
+  };
+
+  const handleGoToRepo = () => {
+    if (!project) return;
+    
+    // Try to find GitHub URL from project data
+    const pAny = project as any;
+    const repoUrl = pAny.repoUrl || pAny.githubUrl || pAny.repository;
+    
+    if (repoUrl) {
+      window.open(repoUrl, '_blank');
+    } else {
+      toast({
+        title: 'No Repository URL',
+        description: 'This project does not have a repository URL configured.',
+        variant: 'destructive'
+      });
+    }
+    
+    setShowContextMenu(false);
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowContextMenu(false);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
 
   // Loading skeleton
   if (!isDataLoaded) {
     return (
       <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
-        {/* AppHeader without search input so it doesn't prompt on load */}
         <AppHeader
           searchTerm=""
           setSearchTerm={() => {}}
@@ -450,12 +666,19 @@ export default function ProjectDetailsPage() {
           onImport={() => {}}
         />
 
-        <main className="flex-1 w-full min-h-screen py-12 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-          <Skeleton className="h-10 w-72 mb-6" />
-          <div className="space-y-10">
-            <Skeleton className="w-full h-96" />
-            <Skeleton className="w-full h-64" />
-            <Skeleton className="w-full h-64" />
+        <main className="flex-1 w-full min-h-screen py-8 px-4 sm:px-6 md:px-8 lg:px-12">
+          <div className="max-w-7xl mx-auto">
+            <Skeleton className="h-8 w-48 mb-6" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1 space-y-6">
+                <Skeleton className="w-full h-80 rounded-xl" />
+                <Skeleton className="w-full h-60 rounded-xl" />
+              </div>
+              <div className="lg:col-span-2 space-y-6">
+                <Skeleton className="w-full h-96 rounded-xl" />
+                <Skeleton className="w-full h-80 rounded-xl" />
+              </div>
+            </div>
           </div>
         </main>
       </div>
@@ -465,21 +688,27 @@ export default function ProjectDetailsPage() {
   // Not found
   if (!project) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-4xl font-bold mb-4">404 - Project Not Found</h1>
-        <p className="text-muted-foreground mb-8">The project you are looking for does not exist.</p>
-        <Button onClick={() => router.push('/')}>
-          <ArrowLeft className="mr-2" /> Go Back Home
-        </Button>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+            <X className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
+          <p className="text-muted-foreground mb-8">The project you're looking for doesn't exist or may have been moved.</p>
+          <Button onClick={() => router.push('/')} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> 
+            Back to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
 
   const logoSrc = (project as any).logo || `https://picsum.photos/seed/${project.id}/800/800`;
+  const progress = (project as any).progress ?? 0;
 
   return (
-    <div className={cn('flex flex-col min-h-screen bg-transparent', font === 'serif' ? 'font-serif' : 'font-sans')}>
-      {/* Header (search removed) */}
+    <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
       <AppHeader
         searchTerm=""
         setSearchTerm={() => {}}
@@ -487,520 +716,867 @@ export default function ProjectDetailsPage() {
         onImport={() => {}}
       />
 
-      {/* Main - FULL WIDTH */}
-      <main className="flex-1 w-full min-h-screen py-8 px-3 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-        {/* Top row: back + save/revert (icon-only) */}
-        <div className="mb-8 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => router.push('/')}>
-              <ArrowLeft className="mr-2" /> Back to Dashboard
-            </Button>
+      <main className="flex-1 w-full min-h-screen py-6 px-4 sm:px-6 md:px-8 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section */}
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => router.push('/')}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" /> 
+                Back to Dashboard
+              </Button>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-muted-foreground">Progress:</div>
+                <Badge variant={progress === 100 ? "default" : "secondary"} className="text-sm">
+                  {progress}%
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={handleRevert}
+                className="h-9 w-9"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <Button 
+                onClick={handleSave}
+                size="icon"
+                className="h-9 w-9"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={handleRevert} aria-label="Revert edits">
-              <X />
-            </Button>
-            <Button size="icon" onClick={handleSave} aria-label="Save changes">
-              <Save />
-            </Button>
-          </div>
-        </div>
-
-        {/* Grid */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-8">
-          {/* LEFT column (project info) */}
-          <div className="md:col-span-4 space-y-6">
-            <Card>
-              <CardContent className="flex flex-col gap-6 p-6">
-                <div className="w-full flex justify-center md:justify-start">
-                  <Image
-                    src={logoSrc}
-                    alt={`${project.title} logo`}
-                    width={720}
-                    height={720}
-                    className="rounded-md border object-cover w-56 h-56 md:w-64 md:h-64 lg:w-80 lg:h-80"
-                    priority
-                    unoptimized
-                  />
-                </div>
-
-                <div className="w-full text-left space-y-3">
-                  {/* Title is read-only now */}
-                  <div className="text-3xl md:text-4xl lg:text-5xl font-headline font-bold p-2">
-                    {project.title}
+          {/* Main Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Project Card */}
+              <Card>
+                <CardContent className="p-6 space-y-6">
+                  {/* Logo with context menu */}
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div
+                        onContextMenu={handleProjectIconContextMenu}
+                        className="cursor-context-menu"
+                      >
+                        <Image
+                          src={logoSrc}
+                          alt={`${project.title} logo`}
+                          width={280}
+                          height={280}
+                          className="rounded-xl border-2 border-border object-cover w-48 h-48"
+                          priority
+                          unoptimized
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <Textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    className="text-base md:text-lg text-muted-foreground p-2 border-0 h-auto shadow-none focus-visible:ring-0 resize-none"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="w-full">
-                  <label className="text-sm font-medium text-muted-foreground block mb-2">Tags</label>
-                  <Input
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                    placeholder="e.g. AI, Productivity"
-                    className="mb-3"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    {editTags.split(',').map(tag => tag.trim()).filter(Boolean).map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                    ))}
-                    {editTags.trim() === '' && <p className="text-sm text-muted-foreground">No tags.</p>}
+                  {/* Title & Description */}
+                  <div className="space-y-4">
+                    <h1 className="text-2xl font-bold text-center">
+                      {project.title}
+                    </h1>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        className="min-h-[100px] resize-none"
+                        placeholder="Describe your project..."
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Progress */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{(project as any).progress === 100 ? 'Completed' : 'In Progress'}</span>
-                  <span className="text-lg font-bold">{(project as any).progress ?? 0}%</span>
-                </div>
-                <div className="mt-4">
-                  <div className="w-full bg-muted h-3 rounded-full overflow-hidden">
-                    <div style={{ width: `${(project as any).progress ?? 0}%` }} className="h-3 rounded-full bg-primary transition-all duration-300" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Compact Links */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2"><LinkIcon size={18} /> Links</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-56 overflow-y-auto">
-                  {editLinks.length > 0 ? editLinks.map((link, idx) => (
-                    <div key={link.id ?? idx} className="flex items-center gap-3 p-2 rounded-md border bg-muted/30">
-                      <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center">
+              {/* Links - SIMPLIFIED DESIGN */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-5 w-5" />
+                      Project Links
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setShowAddLinkModal(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+               <div className="space-y-2">
+                  {editLinks.length > 0 ? editLinks.map((link, index) => (
+                    <motion.div 
+                      key={link.id || `link-${index}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
+                    >
+                      <div 
+                        className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center cursor-pointer"
+                        onClick={() => openLinkModal(link)}
+                      >
                         {validateWebsiteUrl(link.url) ? (
-                          // use google favicon service
-                          <img src={`https://www.google.com/s2/favicons?sz=96&domain=${new URL(link.url).hostname}`} alt="favicon" className="w-8 h-8 object-contain" />
+                          <img 
+                            src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`}
+                            alt=""
+                            className="w-5 h-5"
+                          />
                         ) : (
-                          <div className="text-xs text-muted-foreground">No</div>
+                          <Globe className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium truncate">{link.title || 'Untitled'}</div>
-                          <div className="text-xs text-muted-foreground truncate">{link.url}</div>
-                        </div>
-                        {link.description && <div className="text-xs text-muted-foreground line-clamp-2">{link.description}</div>}
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => openLinkModal(link)}
+                      >
+                        <div className="text-sm font-medium truncate">{link.title}</div>
+                        <div className="text-xs text-muted-foreground truncate">{link.url}</div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => { if (validateWebsiteUrl(link.url)) window.open(link.url, '_blank'); }} aria-label="Open link">
-                          <ExternalLink className="h-4 w-4" />
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => startEditingLink(link)}
+                          className="h-7 w-7"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (link.url) copyToClipboard(link.url); }} aria-label="Copy link">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { const arr = editLinks.filter((_, i) => i !== idx); persistLinksQuick(arr); }} aria-label="Delete link">
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteLink(link.id!)}
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    </div>
-                  )) : <p className="text-sm text-muted-foreground text-center py-4">No links added.</p>}
-                </div>
-
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Manage quick links for this project.</div>
-                  <div>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      const added = [...editLinks, { id: `new-link-${Date.now()}`, title: '', url: '' }];
-                      persistLinksQuick(added);
-                    }} aria-label="Add link">
-                      <Plus />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* ---------- API Keys Card (secure + compact) ---------- */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2"><KeyIcon size={18} /> API Keys</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {apiKeys.length > 0 ? apiKeys.map((k) => {
-                    // display only name + blurred key
-                    const blurred = '•'.repeat(Math.min(24, Math.max(8, k.key.length)));
-                    return (
-                      <div key={k.id} className="flex items-center justify-between gap-3 p-3 rounded-md border bg-muted/30">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                            {k.website && validateWebsiteUrl(k.website) ? (
-                              <img src={getFaviconFor(k.website)} alt="favicon" className="w-8 h-8 object-contain" />
-                            ) : (
-                              <div className="text-xs text-muted-foreground">API</div>
-                            )}
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">{k.name || 'Untitled'}</div>
-                            <div className="text-xs text-muted-foreground truncate">{blurred}</div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          {/* icon-only lock/unlock */}
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            // toggles lock for session: if locked, prompt unlock; if unlocked, lock
-                            if (!isKeysUnlocked) {
-                              promptUnlockOrSet();
-                              return;
-                            }
-                            // unlocked -> toggle per-key unmask
-                            toggleUnmaskKey(k.id);
-                          }} aria-label="Reveal key">
-                            {isKeysUnlocked && unmaskedKeys[k.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-
-                          {/* details popup opener */}
-                          <Button variant="ghost" size="icon" onClick={() => openKeyModal(k)} aria-label="View key details">
-                            <KeyIcon className="h-4 w-4" />
-                          </Button>
-
-                          <Button variant="ghost" size="icon" onClick={() => handleCopyKey(k)} aria-label="Copy key" disabled={!isKeysUnlocked}>
-                            <Copy className="h-4 w-4" />
-                          </Button>
-
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteApiKey(k.id)} aria-label="Delete key">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <div className="text-sm text-muted-foreground text-center py-6 border rounded-md cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setShowAddKeyModal(true)}>
-                      No API keys yet. Click here to add one.
+                    </motion.div>
+                  )) : (
+                    <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+                      <LinkIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No links yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Add important project links</p>
                     </div>
                   )}
                 </div>
+                </CardContent>
+              </Card>
 
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">{isKeysUnlocked ? 'API keys are visible.' : 'Keys are stored locally and protected with a PIN.'}</div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      if (!project) return;
-                      if (isKeysUnlocked) {
-                        sessionStorage.removeItem(`projectflow-unlock-${project.id}`);
-                        setIsKeysUnlocked(false);
-                        setUnmaskedKeys({});
-                        toast({ title: 'Locked' });
-                      } else {
-                        promptUnlockOrSet();
-                      }
-                    }} aria-label="Lock or unlock keys">
-                      {isKeysUnlocked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-                    </Button>
-
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      if (!isKeysUnlocked) {
-                        const storedPin = getProjectPin(project);
-                        if (!storedPin) {
-                          openSetPinModal();
-                          toast({ title: 'Set a PIN first', description: 'You need to set a PIN before adding API keys.' });
-                          return;
-                        } else {
-                          openUnlockPinModal();
+              {/* API Keys - SIMPLIFIED DESIGN */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <KeyIcon className="h-5 w-5" />
+                      API Keys
+                      {!isKeysUnlocked && (
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
+                        if (!isKeysUnlocked) {
+                          promptUnlockOrSet();
                           return;
                         }
-                      }
-                      setShowAddKeyModal(true);
-                    }} aria-label="Add API key">
-                      <Plus className="h-5 w-5" />
+                        setShowAddKeyModal(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {apiKeys.length > 0 ? apiKeys.map((key) => {
+                      const isUnmasked = isKeysUnlocked && unmaskedKeys[key.id];
+                      
+                      return (
+                        <motion.div 
+                          key={key.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
+                        >
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                            {key.website && validateWebsiteUrl(key.website) ? (
+                              <img 
+                                src={getFaviconFor(key.website)} 
+                                alt=""
+                                className="w-5 h-5"
+                              />
+                            ) : (
+                              <KeyIcon className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
 
-          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{key.name}</div>
+                            <div className="text-xs font-mono text-muted-foreground truncate">
+                              {isUnmasked ? key.key : '•'.repeat(16)}
+                            </div>
+                          </div>
 
-          {/* RIGHT column (main content) */}
-          <div className="md:col-span-8 space-y-6">
-            {/* Requirements */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl"><CheckSquare size={20} /> Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-md overflow-hidden bg-background">
-                  <div className="flex w-full min-h-[280px] md:min-h-[360px] lg:min-h-[420px]">
-                    <div className="select-none bg-muted/60 text-muted-foreground text-right py-4 flex flex-col items-end" style={{ minWidth: 64 }}>
-                      {requirementLines.map((_, i) => (
-                        <div key={i} className="text-sm leading-7 h-7 px-3">{i + 1}.</div>
-                      ))}
-                    </div>
-
-                    <textarea
-                      value={editRequirementsText}
-                      onChange={(e) => setEditRequirementsText(e.target.value)}
-                      placeholder="Start typing your requirements... each new line becomes a requirement"
-                      className="flex-1 p-4 bg-transparent resize-vertical outline-none min-h-[280px] md:min-h-[360px] lg:min-h-[420px] text-sm md:text-base leading-7 font-mono"
-                      style={{ lineHeight: '1.75rem' }}
-                    />
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground mt-3">Each new line becomes a separate requirement. Left numbers are visual only.</p>
-              </CardContent>
-            </Card>
-
-            {/* Project Log */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl"><NotebookText size={20} /> Project Log</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Write project log / progress notes here..."
-                    className="min-h-[160px] md:min-h-[200px] lg:min-h-[260px]"
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">{newNote.length}/1000 characters</p>
-                    <Button onClick={handleAddNote} disabled={!newNote.trim()} className="px-4 py-2">
-                      <Plus className="mr-2 h-4 w-4" /> Add Entry
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Entries</h4>
-                  <div className="space-y-4 max-h-[360px] overflow-y-auto">
-                    {(project.notes ?? []).length > 0 ? (
-                      [...(project.notes ?? [])].slice().reverse().map(note => (
-                        <div key={note.id} className="flex gap-4 text-sm group">
-                          <p className="font-mono text-muted-foreground whitespace-nowrap text-xs pt-1 w-24 flex-shrink-0">
-                            {format(new Date(note.date), 'MMM dd')}
-                          </p>
-                          <div className="flex-1 bg-muted/30 p-4 rounded-md border relative">
-                            <p className="whitespace-pre-wrap text-sm pr-8">{note.content}</p>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleDeleteNote(note.id)}
+                              onClick={() => handleCopyKey(key)}
+                              className="h-7 w-7"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEditingKey(key)}
+                              className="h-7 w-7"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteApiKey(key.id)}
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-6 border rounded-md">
-                        No log entries yet. Add your first note to start tracking progress.
-                      </p>
+                        </motion.div>
+                      );
+                    }) : (
+                      <div 
+                        className="text-center py-8 border-2 border-dashed border-muted rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => {
+                          if (!isKeysUnlocked) {
+                            promptUnlockOrSet();
+                            return;
+                          }
+                          setShowAddKeyModal(true);
+                        }}
+                      >
+                        <KeyIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No API keys yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isKeysUnlocked ? 'Click to add API keys' : 'Unlock to manage API keys'}
+                        </p>
+                      </div>
                     )}
-
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <div className="text-xs text-muted-foreground">
+                      {isKeysUnlocked ? (
+                        <span className="text-green-600 flex items-center gap-1">
+                          <Unlock className="h-3 w-3" />
+                          Unlocked
+                        </span>
+                      ) : (
+                        <span className="text-amber-600 flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Locked
+                        </span>
+                      )}
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (!project) return;
+                        if (isKeysUnlocked) {
+                          sessionStorage.removeItem(`projectflow-unlock-${project.id}`);
+                          setIsKeysUnlocked(false);
+                          setUnmaskedKeys({});
+                          setEditingKey(null);
+                          toast({ title: 'API Keys Locked' });
+                        } else {
+                          promptUnlockOrSet();
+                        }
+                      }}
+                      className="gap-1 h-8 text-xs"
+                    >
+                      {isKeysUnlocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                      {isKeysUnlocked ? 'Lock' : 'Unlock'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Requirements - AUTO-NUMBERED */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckSquare className="h-5 w-5" />
+                    Project Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden">
+                    <textarea
+                      value={requirementsDisplayText}
+                      onChange={(e) => handleRequirementsChange(e.target.value)}
+                      placeholder="1. Start typing your requirements... each new line becomes a numbered requirement"
+                      className="w-full p-4 bg-transparent resize-none outline-none min-h-[400px] text-sm md:text-base leading-7 font-mono"
+                      style={{ 
+                        lineHeight: '1.75rem',
+                      }}
+                    />
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Each new line automatically becomes a numbered requirement.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Project Log */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <NotebookText className="h-5 w-5" />
+                    Project Log
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Textarea
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Write your project notes, progress updates, or ideas here..."
+                        className="min-h-[120px] resize-none"
+                        rows={4}
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {newNote.length}/1000 characters
+                        </p>
+                        <Button 
+                          onClick={handleAddNote} 
+                          disabled={!newNote.trim()}
+                          size="icon"
+                          className="h-9 w-9"
+                        >
+                          <GitCommit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-medium text-muted-foreground">Recent Entries</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {(project.notes ?? []).length} total entries
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                        {(project.notes ?? []).length > 0 ? (
+                          [...(project.notes ?? [])].slice().reverse().map((note, index) => (
+                            <motion.div 
+                              key={note.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="flex gap-4 text-sm group"
+                            >
+                              <div className="flex-shrink-0 w-20">
+                                <div className="font-mono text-muted-foreground text-xs pt-1">
+                                  {format(new Date(note.date), 'MMM dd, yyyy')}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date(note.date), 'HH:mm')}
+                                </div>
+                              </div>
+                              
+                              <div className="flex-1 bg-muted/50 p-4 rounded-lg border relative min-h-[80px]">
+                                <p className="whitespace-pre-wrap text-sm pr-10">
+                                  {note.content}
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-3 right-3 h-7 w-7 opacity-70 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                                  onClick={() => handleDeleteNote(note.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </motion.div>
+                          ))
+                        ) : (
+                          <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
+                            <NotebookText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-sm text-muted-foreground mb-2">No log entries yet</p>
+                            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                              Start documenting your project journey. Add notes about progress, challenges, and insights.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* PIN Modal (set or unlock) - unchanged except visibility toggle */}
-      {showPinModal && project && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 8 }}
-            transition={{ duration: 0.15 }}
-            className="w-full max-w-md"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>{pinMode === 'set' ? 'Set API Key PIN' : 'Enter API Key PIN'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pinMode === 'set' ? (
-                  <>
-                    <p className="text-sm text-muted-foreground mb-3">Create a numeric PIN (4–6 digits) to protect API key visibility for this project. This PIN is stored locally inside the project and cannot be recovered.</p>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        value={pinInput}
-                        onChange={(e) => {
-                          if (!validateNumericPin(e.target.value)) return;
-                          setPinInput(e.target.value.slice(0, 6));
-                        }}
-                        placeholder="Enter PIN"
-                        inputMode="numeric"
-                        type={showPinInput ? 'text' : 'password'}
-                        className="flex-1"
-                      />
-                      <Input
-                        value={pinConfirmInput}
-                        onChange={(e) => {
-                          if (!validateNumericPin(e.target.value)) return;
-                          setPinConfirmInput(e.target.value.slice(0, 6));
-                        }}
-                        placeholder="Confirm PIN"
-                        inputMode="numeric"
-                        type={showPinInput ? 'text' : 'password'}
-                        className="flex-1"
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => setShowPinInput(s => !s)} aria-label="Toggle PIN visibility">
-                        {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline" onClick={() => { setShowPinModal(false); setPinInput(''); setPinConfirmInput(''); }}>Cancel</Button>
-                      <Button onClick={confirmSetPin}>Set PIN</Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground mb-3">Enter the project API PIN to view keys this session.</p>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        value={pinInput}
-                        onChange={(e) => {
-                          if (!validateNumericPin(e.target.value)) return;
-                          setPinInput(e.target.value.slice(0, 6));
-                        }}
-                        placeholder="Enter PIN"
-                        inputMode="numeric"
-                        type={showPinInput ? 'text' : 'password'}
-                        className="flex-1"
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => setShowPinInput(s => !s)} aria-label="Toggle PIN visibility">
-                        {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline" onClick={() => { setShowPinModal(false); setPinInput(''); }}>Cancel</Button>
-                      <Button onClick={confirmUnlockPin}>Unlock</Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Add API Key Modal (now supports description + favicon preview) */}
-      {showAddKeyModal && project && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 8 }}
-            transition={{ duration: 0.15 }}
-            className="w-full max-w-lg"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Add API Key</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {isKeysUnlocked
-                    ? 'Add a name, website, the API key value and an optional description.'
-                    : 'You need to unlock API keys first before adding new ones.'}
-                </p>
-
-                {isKeysUnlocked ? (
-                  <div className="space-y-3">
-                    <Input value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder="Name (e.g. OpenAI)" required />
-                    <div className="flex items-center gap-2">
-                      <Input value={newKeyWebsite} onChange={(e) => setNewKeyWebsite(e.target.value)} placeholder="Website (https://api.example.com)" required />
-                      <div className="w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center">
-                        {validateWebsiteUrl(newKeyWebsite) ? (
-                          <img src={getFaviconFor(newKeyWebsite)} alt="favicon" className="w-9 h-9 object-contain" />
-                        ) : (
-                          <div className="text-xs text-muted-foreground">No</div>
-                        )}
+      {/* PIN Modal with Block Style */}
+      <AnimatePresence>
+        {showPinModal && project && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md"
+            >
+              <Card className="border-0 shadow-2xl">
+                <CardHeader className="text-center pb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Lock className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle>
+                    {pinMode === 'set' ? 'Set API Key PIN' : 'Enter PIN to Unlock'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {pinMode === 'set' ? (
+                    <>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-3 block text-center">Enter 4-digit PIN</label>
+                          <div className="flex gap-3 justify-center">
+                            {[0, 1, 2, 3].map((index) => (
+                              <Input
+                              key={index}
+                              ref={(el: HTMLInputElement | null) => {
+                                pinInputRefs.current[index] = el;
+                              }}
+                              value={pinInput[index]}
+                              onChange={(e) => handlePinInputChange(index, e.target.value)}
+                              onKeyDown={(e) => handlePinKeyDown(index, e)}
+                              inputMode="numeric"
+                              type={showPinInput ? 'text' : 'password'}
+                              className="w-14 h-14 text-center text-xl font-mono"
+                              maxLength={1}
+                              autoFocus={index === 0}
+                            />
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium mb-3 block text-center">Confirm PIN</label>
+                          <div className="flex gap-3 justify-center">
+                            {[0, 1, 2, 3].map((index) => (
+                              <Input
+                                key={index}
+                                value={pinConfirmInput[index]}
+                                onChange={(e) => handlePinInputChange(index, e.target.value, true)}
+                                onKeyDown={(e) => handlePinKeyDown(index, e, true)}
+                                inputMode="numeric"
+                                type={showPinInput ? 'text' : 'password'}
+                                className="w-14 h-14 text-center text-xl font-mono"
+                                maxLength={1}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <Input value={newKeyValue} onChange={(e) => setNewKeyValue(e.target.value)} placeholder="API Key" className="font-mono" type="text" required />
-                    <Textarea value={newKeyDescription} onChange={(e) => setNewKeyDescription(e.target.value)} placeholder="Optional description" rows={3} />
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Unlock API keys to add new ones</p>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => { setShowAddKeyModal(false); setNewKeyName(''); setNewKeyWebsite(''); setNewKeyValue(''); setNewKeyDescription(''); }}>Cancel</Button>
-                  <Button onClick={confirmAddKey} disabled={!isKeysUnlocked || !newKeyName.trim() || !newKeyWebsite.trim() || !newKeyValue.trim() || !validateWebsiteUrl(newKeyWebsite)}>Add Key</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Key details modal (opened when clicking a key) */}
-      {showKeyModal && selectedKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">
-            <Card>
-              <CardHeader>
-                <CardTitle>{selectedKey.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded overflow-hidden bg-muted flex items-center justify-center">
-                    {selectedKey.website && validateWebsiteUrl(selectedKey.website) ? (
-                      <img src={getFaviconFor(selectedKey.website)} alt="favicon" className="w-12 h-12 object-contain" />
-                    ) : (
-                      <div className="text-sm text-muted-foreground">API</div>
-                    )}
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="mb-2 font-medium">API Key</div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-mono break-words">{selectedKey.key}</div>
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(selectedKey.key)} aria-label="Copy key">
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {selectedKey.description && (
-                      <div className="mt-3 text-sm text-muted-foreground">{selectedKey.description}</div>
-                    )}
-
-                    {selectedKey.website && (
-                      <div className="mt-3 text-xs">
-                        <a href={selectedKey.website} target="_blank" rel="noreferrer noopener" className="text-primary underline">Open website</a>
+                      
+                      <div className="flex items-center justify-between pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setShowPinInput(!showPinInput)}
+                          className="flex-shrink-0"
+                        >
+                          {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => { 
+                              setShowPinModal(false); 
+                              setPinInput(['', '', '', '']); 
+                              setPinConfirmInput(['', '', '', '']); 
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={confirmSetPin}
+                            disabled={getPinValue().length !== 4 || getPinValue(true).length !== 4}
+                          >
+                            Set PIN
+                          </Button>
+                        </div>
                       </div>
-                    )}
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-3 block text-center">Enter 4-digit PIN</label>
+                        <div className="flex gap-3 justify-center">
+                          {[0, 1, 2, 3].map((index) => (
+                           <Input
+                            key={index}
+                            ref={(el: HTMLInputElement | null) => {
+                              pinInputRefs.current[index] = el;
+                            }}
+                            value={pinInput[index]}
+                            onChange={(e) => handlePinInputChange(index, e.target.value)}
+                            onKeyDown={(e) => handlePinKeyDown(index, e)}
+                            inputMode="numeric"
+                            type={showPinInput ? 'text' : 'password'}
+                            className="w-14 h-14 text-center text-xl font-mono"
+                            maxLength={1}
+                            autoFocus={index === 0}
+                          />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setShowPinInput(!showPinInput)}
+                          className="flex-shrink-0"
+                        >
+                          {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => { 
+                              setShowPinModal(false); 
+                              setPinInput(['', '', '', '']); 
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={confirmUnlockPin}
+                            disabled={getPinValue().length !== 4}
+                          >
+                            Unlock
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit API Key Modal */}
+      <AnimatePresence>
+        {(showAddKeyModal || editingKey) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md"
+            >
+              <Card className="border-0 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <KeyIcon className="h-5 w-5" />
+                    {editingKey ? 'Edit API Key' : 'Add API Key'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <Input 
+                      value={editingKey ? editingKey.name : newKeyName} 
+                      onChange={(e) => editingKey ? 
+                        setEditingKey({...editingKey, name: e.target.value}) : 
+                        setNewKeyName(e.target.value)
+                      } 
+                      placeholder="Service Name (e.g. OpenAI, Stripe)" 
+                      required 
+                    />
+                    
+                    <Input 
+                      value={editingKey ? editingKey.website || '' : newKeyWebsite} 
+                      onChange={(e) => editingKey ? 
+                        setEditingKey({...editingKey, website: e.target.value}) : 
+                        setNewKeyWebsite(e.target.value)
+                      } 
+                      placeholder="Website (optional)" 
+                    />
+                    
+                    <Input 
+                      value={editingKey ? editingKey.key : newKeyValue} 
+                      onChange={(e) => editingKey ? 
+                        setEditingKey({...editingKey, key: e.target.value}) : 
+                        setNewKeyValue(e.target.value)
+                      } 
+                      placeholder="API Key Value" 
+                      className="font-mono" 
+                      required 
+                    />
+                    
+                    <Textarea 
+                      value={editingKey ? editingKey.description || '' : newKeyDescription} 
+                      onChange={(e) => editingKey ? 
+                        setEditingKey({...editingKey, description: e.target.value}) : 
+                        setNewKeyDescription(e.target.value)
+                      } 
+                      placeholder="Optional description or notes about this API key" 
+                      rows={3} 
+                    />
                   </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => { 
+                        if (editingKey) {
+                          setEditingKey(null);
+                        } else {
+                          setShowAddKeyModal(false); 
+                          setNewKeyName(''); 
+                          setNewKeyWebsite(''); 
+                          setNewKeyValue(''); 
+                          setNewKeyDescription(''); 
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={editingKey ? confirmUpdateKey : confirmAddKey} 
+                      disabled={
+                        editingKey ? 
+                        !editingKey.name.trim() || !editingKey.key.trim() :
+                        !newKeyName.trim() || !newKeyValue.trim()
+                      }
+                    >
+                      {editingKey ? 'Update Key' : 'Add Key'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit Link Modal */}
+      <AnimatePresence>
+        {(showAddLinkModal || editingLink) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md"
+            >
+              <Card className="border-0 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5" />
+                    {editingLink ? 'Edit Link' : 'Add Link'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <Input 
+                      value={editingLink ? editingLink.title : newLinkTitle} 
+                      onChange={(e) => editingLink ? 
+                        setEditingLink({...editingLink, title: e.target.value}) : 
+                        setNewLinkTitle(e.target.value)
+                      } 
+                      placeholder="Link Title" 
+                      required 
+                    />
+                    
+                    <Input 
+                      value={editingLink ? editingLink.url : newLinkUrl} 
+                      onChange={(e) => editingLink ? 
+                        setEditingLink({...editingLink, url: e.target.value}) : 
+                        setNewLinkUrl(e.target.value)
+                      } 
+                      placeholder="https://example.com" 
+                      required 
+                    />
+                    
+                    <Textarea 
+                      value={editingLink ? editingLink.description || '' : newLinkDescription} 
+                      onChange={(e) => editingLink ? 
+                        setEditingLink({...editingLink, description: e.target.value}) : 
+                        setNewLinkDescription(e.target.value)
+                      } 
+                      placeholder="Optional description" 
+                      rows={3} 
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => { 
+                        if (editingLink) {
+                          setEditingLink(null);
+                        } else {
+                          setShowAddLinkModal(false); 
+                          setNewLinkTitle(''); 
+                          setNewLinkUrl(''); 
+                          setNewLinkDescription(''); 
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={editingLink ? confirmUpdateLink : confirmAddLink} 
+                      disabled={
+                        editingLink ? 
+                        !editingLink.title.trim() || !editingLink.url.trim() :
+                        !newLinkTitle.trim() || !newLinkUrl.trim()
+                      }
+                    >
+                      {editingLink ? 'Update Link' : 'Add Link'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Link Details Modal */}
+      <AnimatePresence>
+        {selectedLink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="w-full max-w-md"
+            >
+              <Card className="border-0 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5" />
+                    Link Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      {validateWebsiteUrl(selectedLink.url) ? (
+                        <img 
+                          src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(selectedLink.url).hostname}`}
+                          alt=""
+                          className="w-10 h-10"
+                        />
+                      ) : (
+                        <Globe className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground mb-1">Title</div>
+                        <div className="font-medium">{selectedLink.title}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground mb-1">URL</div>
+                        <div className="text-sm break-all">{selectedLink.url}</div>
+                      </div>
+
+                      {selectedLink.description && (
+                        <div>
+                          <div className="text-sm font-medium text-muted-foreground mb-1">Description</div>
+                          <div className="text-sm text-muted-foreground">{selectedLink.description}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="flex justify-end gap-2 p-4 pt-0">
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open(selectedLink.url, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Visit
+                  </Button>
+                  <Button variant="outline" onClick={closeLinkModal}>
+                    Close
+                  </Button>
                 </div>
-              </CardContent>
-              <div className="flex justify-end p-4 pt-0">
-                <Button variant="outline" onClick={() => closeKeyModal()}>Close</Button>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-      )}
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Context Menu for Project Icon */}
+      <AnimatePresence>
+        {showContextMenu && (
+          <div 
+            className="fixed z-50 bg-background border rounded-lg shadow-lg py-1 min-w-[140px]"
+            style={{
+              left: contextMenuPosition.x,
+              top: contextMenuPosition.y,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <button
+                onClick={handleGoToRepo}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+              >
+                <Github className="h-4 w-4" />
+                Go to Repository
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

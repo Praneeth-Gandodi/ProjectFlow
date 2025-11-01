@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ProfileProvider } from '@/context/profile-context';
 import { PinProvider } from '@/context/pin-context';
 import { AppLock } from '@/components/app-lock';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -27,14 +28,21 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
-        <PinProvider>
-          <ProfileProvider>
-            <AppLock>
-              {children}
-            </AppLock>
-          </ProfileProvider>
-        </PinProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PinProvider>
+            <ProfileProvider>
+              <AppLock>
+                {children}
+              </AppLock>
+            </ProfileProvider>
+          </PinProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

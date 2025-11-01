@@ -49,7 +49,7 @@ export function AppLock({ children }: { children: React.ReactNode }) {
   const isPermanentlyLocked = attempts >= MAX_ATTEMPTS;
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-background text-foreground z-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

@@ -5,7 +5,7 @@ export interface Note {
 }
 
 export interface Link {
-  id?: string; // Optional for new links
+  id?: string; 
   title: string;
   url: string;
   description?: string;
@@ -20,16 +20,14 @@ export interface Requirement {
 export interface Project {
   id: string;
   title: string;
-  description: string;
-
-  // Allow string for backward compatibility, but prefer Requirement[]
-  requirements?: string | string[] | Requirement[];
-
-  links: Link[];
-
+  description?: string;
+  requirements?: string | string[];
   logo?: string;
-  progress: number;
-  tags: string[];
-
+  links?: Link[];
   notes?: Note[];
+  progress?: number;
+  tags?: string[];
+  repoUrl?: string;
+  apiKeys?: any[]; 
+  apiKeyPin?: string;
 }
