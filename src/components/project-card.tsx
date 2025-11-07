@@ -164,41 +164,46 @@ export function ProjectCard({
         </div>
 
         <Card className="w-full h-full flex flex-col pl-8">
-          <div className="flex-grow flex flex-col">
-            <Link href={`/project/${project.id}`} className="flex flex-col flex-grow">
-              <CardHeader className="pr-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                    {isExternal ? (
-                      <img
-                        src={logoSrc}
-                        alt={`${safeTitle} logo`}
-                        width={64}
-                        height={64}
-                        className="w-16 h-16 object-cover"
-                        onError={handleImgError}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <Image
-                        src={logoSrc}
-                        alt={`${safeTitle} logo`}
-                        width={64}
-                        height={64}
-                        className="rounded-lg border object-cover"
-                        unoptimized
-                      />
-                    )}
+          <div className="flex flex-col flex-grow">
+            <CardHeader className="pr-4 pb-4">
+              <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                      <Link href={`/project/${project.id}`}>
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                              {isExternal ? (
+                                  <img
+                                      src={logoSrc}
+                                      alt={`${safeTitle} logo`}
+                                      width={64}
+                                      height={64}
+                                      className="w-16 h-16 object-cover"
+                                      onError={handleImgError}
+                                      loading="lazy"
+                                  />
+                              ) : (
+                                  <Image
+                                      src={logoSrc}
+                                      alt={`${safeTitle} logo`}
+                                      width={64}
+                                      height={64}
+                                      className="rounded-lg border object-cover"
+                                      unoptimized
+                                  />
+                              )}
+                          </div>
+                      </Link>
                   </div>
-
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
-                    <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                      <Link href={`/project/${project.id}`}>
+                          <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
+                          <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                      </Link>
                   </div>
-                </div>
-              </CardHeader>
+              </div>
+            </CardHeader>
 
-              <CardContent className="space-y-4 flex-grow">
+            <CardContent className="space-y-4 flex-grow pt-0">
+               <Link href={`/project/${project.id}`} className="block h-full">
                 {tags.length > 0 && (
                   <div>
                     <div className="flex flex-wrap gap-2">
@@ -208,8 +213,10 @@ export function ProjectCard({
                     </div>
                   </div>
                 )}
-              </CardContent>
-              <CardFooter>
+               </Link>
+            </CardContent>
+
+            <CardFooter className="pt-4">
                  {dueDate && source === 'ideas' && (
                   <div
                     className={cn(
@@ -221,8 +228,7 @@ export function ProjectCard({
                     <span>{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d')}</span>
                   </div>
                 )}
-              </CardFooter>
-            </Link>
+            </CardFooter>
           </div>
 
           <div className="absolute top-2 right-2 flex items-center gap-1">
