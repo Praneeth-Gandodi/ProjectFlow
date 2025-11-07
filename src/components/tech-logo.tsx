@@ -38,7 +38,7 @@ const DEVICON_MAP: Record<string, string> = {
   html5: 'html5',
   css3: 'css3',
   sql: 'azuresqldatabase',
-  assembly: 'wasm',
+  assembly: 'wasm', // Best guess for assembly
   bash: 'bash',
   powershell: 'powershell',
   solidity: 'solidity',
@@ -47,6 +47,7 @@ const DEVICON_MAP: Record<string, string> = {
   julia: 'julia',
   verilog: 'verilog',
   vhdl: 'vhdl',
+  c: 'c',
 
   // Frameworks & Libraries
   react: 'react',
@@ -104,6 +105,10 @@ const DEVICON_MAP: Record<string, string> = {
   neo4j: 'neo4j',
   elasticsearch: 'elasticsearch',
   microsoftsqlserver: 'microsoftsqlserver',
+  supabase: 'supabase',
+  appwrite: 'appwrite',
+  prisma: 'prisma',
+  planetscale: 'planetscale',
   
   // DevOps & Tools
   git: 'git',
@@ -135,14 +140,20 @@ const DEVICON_MAP: Record<string, string> = {
   fedora: 'fedora',
   centos: 'centos',
   archlinux: 'archlinux',
-  blackarch: 'archlinux',
+  blackarch: 'archlinux', // using archlinux for blackarch
   kalilinux: 'kalilinux',
+  popos: 'pop',
+  'pop!_os': 'pop',
+  parrotos: 'parrot',
+  zorinos: 'zorin',
   rhel: 'redhat',
   redhat: 'redhat',
   yarn: 'yarn',
   npm: 'npm',
   gulp: 'gulp',
   grunt: 'grunt',
+  prometheus: 'prometheus',
+  grafana: 'grafana',
 
   // Design & 3D
   figma: 'figma',
@@ -171,12 +182,11 @@ const DEVICON_MAP: Record<string, string> = {
   jupyter: 'jupyter',
   arduino: 'arduino',
   raspberrypi: 'raspberrypi',
-  
-  // Fallbacks
-  c: 'c',
+  flutter: 'flutter',
+  'react native': 'react',
 };
 
-// Icons that should use the "original" (colored) version
+// Icons that should use the "original" (colored) version. Most plain icons are single-color and can be themed.
 const COLORED_ICONS = new Set([
   'react', 'vuejs', 'nextjs', 'python', 'java', 'html5', 'css3', 
   'javascript', 'typescript', 'svelte', 'angular', 'bootstrap',
@@ -197,7 +207,7 @@ const getDeviconUrl = (courseName: string): { url: string | null, colored: boole
   for (const key of sortedKeys) {
     if (nameLower.includes(key)) {
       const iconName = DEVICON_MAP[key];
-      // For plain icons, we don't want colored versions, just the single-path svg
+      // Use 'plain' for themeable single-color icons, and 'original' for iconic multi-color logos
       const version = COLORED_ICONS.has(iconName) ? 'original' : 'plain';
       return {
         url: `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-${version}.svg`,
@@ -214,7 +224,12 @@ const getFaviconUrl = (course: Course): string | null => {
     const firstUrl = course.links[0].url;
     if (firstUrl) {
       try {
-        const domain = new URL(firstUrl).hostname;
+        // Ensure the URL has a protocol
+        let fullUrl = firstUrl;
+        if (!/^https?:\/\//i.test(fullUrl)) {
+          fullUrl = 'https://' + fullUrl;
+        }
+        const domain = new URL(fullUrl).hostname;
         return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
       } catch (e) {
         return null;
@@ -255,9 +270,14 @@ export function TechLogo({ course, className }: TechLogoProps) {
           className
         )}
         unoptimized
+        // Fallback to favicon if the devicon fails to load
         onError={(e) => {
-          // If the Devicon fails to load, hide it to allow fallback to favicon
-          (e.target as HTMLImageElement).style.display = 'none';
+          const faviconUrl = getFaviconUrl(course);
+          if (faviconUrl) {
+            (e.target as HTMLImageElement).src = faviconUrl;
+          } else {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }
         }}
       />
     );
