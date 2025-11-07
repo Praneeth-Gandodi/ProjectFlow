@@ -22,7 +22,7 @@ import { ProfileDialog } from './profile-dialog';
 import { PinContext } from '@/context/pin-context';
 
 interface ProfileMenuProps {
-  onExport: (format: 'json' | 'csv-projects' | 'csv-links') => void;
+  onExport: (format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => void;
   onImport: () => void;
 }
 
@@ -98,6 +98,9 @@ export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onExport('csv-links')}>
                   Links (CSV)
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => onExport('csv-courses')}>
+                  Courses (CSV)
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>

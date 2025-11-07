@@ -11,6 +11,14 @@ export interface Link {
   description?: string;
 }
 
+export interface Course {
+  id: string;
+  name: string;
+  completed: boolean;
+  links?: Link[];
+  logo?: string;
+}
+
 export interface Requirement {
   id: string;
   text: string;

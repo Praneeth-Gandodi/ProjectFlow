@@ -1,4 +1,4 @@
-import type { Project, Link } from './types';
+import type { Project, Link, Course } from './types';
 
 export const INITIAL_IDEAS: Project[] = [
   {
@@ -68,5 +68,26 @@ export const INITIAL_LINKS: Link[] = [
     title: 'Tailwind CSS',
     url: 'https://tailwindcss.com',
     description: 'A utility-first CSS framework for rapid UI development.',
+  },
+];
+
+export const INITIAL_COURSES: Course[] = [
+  {
+    id: 'course-1',
+    name: 'React - The Complete Guide',
+    completed: false,
+    links: [{ id: 'link-course-1', title: 'Course on Udemy', url: 'https://www.udemy.com/course/react-the-complete-guide-incl-redux/' }],
+  },
+  {
+    id: 'course-2',
+    name: 'Python for Everybody',
+    completed: false,
+    links: [{ id: 'link-course-2', title: 'Coursera', url: 'https://www.coursera.org/specializations/python' }],
+  },
+  {
+    id: 'course-3',
+    name: 'Figma UI/UX Design Essentials',
+    completed: true,
+    links: [],
   },
 ];
