@@ -164,8 +164,8 @@ export function ProjectCard({
         </div>
 
         <Card className="w-full h-full flex flex-col pl-8">
-          <Link href={`/project/${project.id}`} className="block h-full">
-            <div className="flex flex-col h-full">
+          <div className="flex-grow flex flex-col">
+            <Link href={`/project/${project.id}`} className="flex flex-col flex-grow">
               <CardHeader className="pr-4">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
@@ -222,8 +222,8 @@ export function ProjectCard({
                   </div>
                 )}
               </CardFooter>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
           <div className="absolute top-2 right-2 flex items-center gap-1">
             <div className="w-16 text-center">
