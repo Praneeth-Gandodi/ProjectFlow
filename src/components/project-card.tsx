@@ -202,32 +202,11 @@ export function ProjectCard({
                   </div>
                 )}
               </CardContent>
-
-              <CardFooter className="pr-4 flex flex-col items-start gap-3">
-                {source === 'ideas' && (
-                  <Button
-                    onClick={(e) => {
-                      e.preventDefault(); // prevent navigation
-                      try {
-                        onMarkAsCompleted(project);
-                      } catch (err) {
-                        console.error('Mark as completed failed', err);
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    aria-label={`Mark ${safeTitle} as completed`}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Completed
-                  </Button>
-                )}
-              </CardFooter>
+              <CardFooter></CardFooter>
             </div>
           </Link>
 
-          <div className="absolute top-2 right-2 flex items-center gap-2">
+          <div className="absolute top-2 right-2 flex items-center gap-1">
             <div className="w-16 text-center">
               {isEditingProgress && source === 'ideas' ? (
                 <Input
@@ -256,6 +235,21 @@ export function ProjectCard({
                 </button>
               )}
             </div>
+
+            {source === 'ideas' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onMarkAsCompleted(project);
+                }}
+                aria-label={`Mark ${safeTitle} as completed`}
+              >
+                <CheckCircle className="h-5 w-5 text-muted-foreground hover:text-green-600" />
+              </Button>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
