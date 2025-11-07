@@ -1,21 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  ExternalLink,
   Link as LinkIcon,
   ArrowLeft,
-  Save,
   Plus,
   Trash2,
   BookOpen,
   GitCommit,
   Globe,
   Edit3,
+  Lightbulb,
 } from 'lucide-react';
 import type { Course, Note, Link as LinkType } from '@/app/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -44,6 +43,7 @@ export default function CourseDetailsPage() {
 
   // Editing state
   const [editLinks, setEditLinks] = useState<LinkType[]>([]);
+  const [editReason, setEditReason] = useState('');
   const [newNote, setNewNote] = useState('');
 
   // Modals
@@ -71,6 +71,7 @@ export default function CourseDetailsPage() {
   useEffect(() => {
     if (course) {
       setEditLinks(course.links || []);
+      setEditReason(course.reason || '');
     }
   }, [course]);
 
@@ -79,6 +80,13 @@ export default function CourseDetailsPage() {
     setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
     setCourse(updatedCourse); // Keep local component state in sync
   };
+  
+  const handleSaveReason = () => {
+    if (!course) return;
+    const updatedCourse = { ...course, reason: editReason };
+    persistCourse(updatedCourse);
+    toast({ title: 'Reason Saved', description: 'Your motivation has been updated.' });
+  }
 
   // --- Link Handlers ---
   const persistLinksQuick = (linksArr: LinkType[]) => {
@@ -190,6 +198,26 @@ export default function CourseDetailsPage() {
                   <h1 className="text-3xl font-bold text-center">{course.name}</h1>
                 </CardContent>
               </Card>
+              
+               <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5" />
+                    Why I'm Learning This
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="Describe your motivation for this course..."
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button onClick={handleSaveReason} size="sm">Save Reason</Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Links Card */}
               <Card>
@@ -213,17 +241,19 @@ export default function CourseDetailsPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
                       >
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                          {validateUrl(link.url) ? (
-                            <img src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`} alt="" className="w-5 h-5" />
-                          ) : (
-                            <Globe className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{link.title}</div>
-                          <div className="text-xs text-muted-foreground truncate">{link.url}</div>
-                        </div>
+                         <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                            {validateUrl(link.url) ? (
+                              <img src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`} alt="" className="w-5 h-5" />
+                            ) : (
+                              <Globe className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{link.title}</div>
+                            <div className="text-xs text-muted-foreground truncate">{link.url}</div>
+                          </div>
+                        </a>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" onClick={() => { setEditingLink(link); setShowAddLinkModal(true); }} className="h-7 w-7">
                             <Edit3 className="h-3.5 w-3.5" />

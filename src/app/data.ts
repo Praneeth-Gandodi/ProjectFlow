@@ -77,17 +77,20 @@ export const INITIAL_COURSES: Course[] = [
     name: 'React - The Complete Guide',
     completed: false,
     links: [{ id: 'link-course-1', title: 'Course on Udemy', url: 'https://www.udemy.com/course/react-the-complete-guide-incl-redux/' }],
+    reason: 'To master React for building modern web applications.',
   },
   {
     id: 'course-2',
     name: 'Python for Everybody',
     completed: false,
     links: [{ id: 'link-course-2', title: 'Coursera', url: 'https://www.coursera.org/specializations/python' }],
+    reason: 'For data science and backend development skills.',
   },
   {
     id: 'course-3',
     name: 'Figma UI/UX Design Essentials',
     completed: true,
     links: [],
+    reason: 'To improve my design skills and create better user interfaces.',
   },
 ];

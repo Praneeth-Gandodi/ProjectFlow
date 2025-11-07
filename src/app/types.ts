@@ -18,6 +18,7 @@ export interface Course {
   links?: Link[];
   logo?: string;
   notes?: Note[];
+  reason?: string;
 }
 
 export interface Requirement {
