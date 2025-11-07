@@ -19,8 +19,12 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
   const { toast } = useToast();
 
   const sortedCourses = useMemo(() => {
-    const incomplete = courses.filter(c => !c.completed);
-    const completed = courses.filter(c => c.completed);
+    // This is now just used for display, not for state mutation
+    const allCourses = [...courses];
+    const incomplete = allCourses.filter(c => !c.completed);
+    const completed = allCourses.filter(c => c.completed);
+    // The visual sorting is not strictly needed if drag-and-drop is the primary ordering method
+    // But it's good for initial render
     return [...incomplete, ...completed];
   }, [courses]);
 
@@ -57,6 +61,18 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
   const handleUpdateCourse = (updatedCourse: Course) => {
      setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
   }
+  
+  const moveCard = (dragId: string, hoverId: string) => {
+    const dragIndex = courses.findIndex(c => c.id === dragId);
+    const hoverIndex = courses.findIndex(c => c.id === hoverId);
+    
+    if (dragIndex === -1 || hoverIndex === -1) return;
+
+    const newCourses = [...courses];
+    const [draggedItem] = newCourses.splice(dragIndex, 1);
+    newCourses.splice(hoverIndex, 0, draggedItem);
+    setCourses(newCourses);
+  };
 
   return (
     <div className="mt-6">
@@ -66,13 +82,14 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {sortedCourses.map(course => (
+        {courses.map(course => (
           <CourseCard
             key={course.id}
             course={course}
             onEdit={() => handleEditCourse(course)}
             onDelete={() => handleDeleteCourse(course.id)}
             onToggleComplete={() => handleToggleComplete(course)}
+            moveCard={moveCard}
           />
         ))}
         {courses.length === 0 && (

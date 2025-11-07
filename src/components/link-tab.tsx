@@ -39,6 +39,18 @@ export function LinkTab({ links, setLinks }: LinkTabProps) {
     }
   };
 
+  const moveCard = (dragId: string, hoverId: string) => {
+    const dragIndex = links.findIndex(l => l.id === dragId);
+    const hoverIndex = links.findIndex(l => l.id === hoverId);
+    
+    if (dragIndex === -1 || hoverIndex === -1) return;
+
+    const newLinks = [...links];
+    const [draggedItem] = newLinks.splice(dragIndex, 1);
+    newLinks.splice(hoverIndex, 0, draggedItem);
+    setLinks(newLinks);
+  };
+
   return (
     <div className="mt-6">
       <div className="flex justify-end mb-4">
@@ -52,7 +64,8 @@ export function LinkTab({ links, setLinks }: LinkTabProps) {
             key={link.id} 
             link={link} 
             onEdit={() => handleEditLink(link)} 
-            onDelete={() => handleDeleteLink(link.id)} 
+            onDelete={() => handleDeleteLink(link.id!)}
+            moveCard={moveCard}
           />
         ))}
         {links.length === 0 && (
