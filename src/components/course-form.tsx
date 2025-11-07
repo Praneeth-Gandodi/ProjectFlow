@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { Course, Link as LinkType } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Upload } from 'lucide-react';
@@ -32,7 +33,8 @@ interface CourseFormProps {
 const linkSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, 'Link title is required'),
-  url: z.string().optional(),
+  url: z.string().url('Please enter a valid URL'),
+  description: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -110,6 +112,7 @@ export function CourseForm({ isOpen, setIsOpen, course, setCourses, onUpdateCour
         completed: false,
         links: values.links,
         logo: values.logo,
+        notes: [],
       };
       setCourses(prev => [newCourse, ...prev]);
       toast({ title: 'New course added!' });
@@ -129,9 +132,10 @@ export function CourseForm({ isOpen, setIsOpen, course, setCourses, onUpdateCour
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <Tabs defaultValue="details">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="details">Details</TabsTrigger>
-                  {course && <TabsTrigger value="logo">Custom Logo</TabsTrigger>}
+                  <TabsTrigger value="links">Links</TabsTrigger>
+                  <TabsTrigger value="logo">Logo</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-4">
                 <FormField
@@ -147,13 +151,15 @@ export function CourseForm({ isOpen, setIsOpen, course, setCourses, onUpdateCour
                     </FormItem>
                   )}
                 />
+              </TabsContent>
 
-                <div>
+              <TabsContent value="links" className="pt-4 space-y-4">
+                 <div>
                   <FormLabel>Links</FormLabel>
-                  <div className="mt-2 space-y-3">
+                  <div className="mt-2 space-y-3 max-h-60 overflow-y-auto pr-2">
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-end gap-2 p-3 bg-muted/50 rounded-lg">
-                        <div className="grid grid-cols-2 gap-2 flex-grow">
+                        <div className="grid grid-cols-1 gap-4 flex-grow">
                             <FormField
                             control={form.control}
                             name={`links.${index}.title`}
@@ -172,7 +178,7 @@ export function CourseForm({ isOpen, setIsOpen, course, setCourses, onUpdateCour
                             name={`links.${index}.url`}
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel className="text-xs">URL (Optional)</FormLabel>
+                                <FormLabel className="text-xs">URL</FormLabel>
                                 <FormControl>
                                     <Input placeholder="https://..." {...field} />
                                 </FormControl>
@@ -180,63 +186,75 @@ export function CourseForm({ isOpen, setIsOpen, course, setCourses, onUpdateCour
                                 </FormItem>
                             )}
                             />
+                             <FormField
+                              control={form.control}
+                              name={`links.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Description (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="Short summary of the link..." {...field} rows={2} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => remove(index)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ title: '', url: '' })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ title: '', url: '', description: '' })}>
                       <Plus className="mr-2 h-4 w-4" /> Add Link
                     </Button>
                   </div>
                 </div>
               </TabsContent>
+
                <TabsContent value="logo" className="pt-4 space-y-4">
-                 {course && (
-                    <div className="flex items-center gap-4 pt-4 pb-6">
-                    {logoPreview && (
-                      <Image
-                        src={logoPreview}
-                        alt="Logo preview"
-                        width={80}
-                        height={80}
-                        className="rounded-lg border object-contain"
-                        unoptimized
+                  <div className="flex items-center gap-4 pt-4 pb-6">
+                  {logoPreview && (
+                    <Image
+                      src={logoPreview}
+                      alt="Logo preview"
+                      width={80}
+                      height={80}
+                      className="rounded-lg border object-contain"
+                      unoptimized
+                    />
+                  )}
+
+                  <div className="flex-1 space-y-2">
+                    <FormLabel>Custom Logo</FormLabel>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
+                        <Upload className="mr-2 h-4 w-4" /> Upload
+                      </Button>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
                       />
-                    )}
 
-                    <div className="flex-1 space-y-2">
-                      <FormLabel>Custom Logo</FormLabel>
-                      <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handleLogoUploadClick}>
-                          <Upload className="mr-2 h-4 w-4" /> Upload
-                        </Button>
-
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="logo"
-                          render={({ field }) => (
-                            <FormItem className='flex-1'>
-                              <FormControl>
-                                <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="logo"
+                        render={({ field }) => (
+                          <FormItem className='flex-1'>
+                            <FormControl>
+                              <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
-                 )}
+                </div>
                </TabsContent>
             </Tabs>
 

@@ -17,6 +17,7 @@ export interface Course {
   completed: boolean;
   links?: Link[];
   logo?: string;
+  notes?: Note[];
 }
 
 export interface Requirement {
