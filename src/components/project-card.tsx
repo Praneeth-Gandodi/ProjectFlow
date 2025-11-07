@@ -4,8 +4,6 @@ import type { Project } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
 import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import { useDrag, useDrop, DragSourceMonitor } from 'react-dnd';
 import { useState, useRef, useEffect } from 'react';
@@ -23,6 +21,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: Project;
@@ -57,8 +57,9 @@ export function ProjectCard({
   onMarkAsCompleted
 }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [localProgress, setLocalProgress] = useState<number>(typeof project.progress === 'number' ? project.progress : 0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // useDrag — typed
   const [{ isDragging }, dragRef, previewRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
@@ -100,13 +101,37 @@ export function ProjectCard({
   useEffect(() => {
     setLocalProgress(typeof project.progress === 'number' ? project.progress : 0);
   }, [project.progress]);
+  
+  useEffect(() => {
+    if (isEditingProgress) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditingProgress]);
 
-  const handleSliderCommit = (value: number[]) => {
-    const newProgress = Array.isArray(value) && typeof value[0] === 'number' ? value[0] : localProgress;
-    try {
-      onUpdateProject({ ...project, progress: newProgress });
-    } catch (err) {
-      console.error('Failed to update project progress', err);
+  const handleProgressCommit = () => {
+    let newProgress = Number(localProgress);
+    if (isNaN(newProgress) || newProgress < 0) newProgress = 0;
+    if (newProgress > 100) newProgress = 100;
+    
+    setLocalProgress(newProgress);
+    setIsEditingProgress(false);
+
+    if (project.progress !== newProgress) {
+      try {
+        onUpdateProject({ ...project, progress: newProgress });
+      } catch (err) {
+        console.error('Failed to update project progress', err);
+      }
+    }
+  };
+
+  const handleProgressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleProgressCommit();
+    } else if (e.key === 'Escape') {
+      setLocalProgress(project.progress || 0);
+      setIsEditingProgress(false);
     }
   };
 
@@ -124,15 +149,15 @@ export function ProjectCard({
 
   return (
     <div ref={previewRef as unknown as React.LegacyRef<HTMLDivElement>} style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <div ref={ref} className="relative transition-shadow hover:shadow-lg rounded-lg h-full">
+      <div ref={ref} className="relative transition-shadow hover:shadow-lg rounded-lg h-full group/card">
         <div className="absolute left-2 top-1/2 -translate-y-1/2 cursor-grab text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity z-10" aria-hidden>
           <GripVertical size={20} />
         </div>
 
-        <Card className="group/card w-full h-full flex flex-col">
+        <Card className="w-full h-full flex flex-col pl-8">
           <Link href={`/project/${project.id}`} className="block h-full">
             <div className="flex flex-col h-full">
-              <CardHeader className="pl-10 pr-4">
+              <CardHeader className="pr-4">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
                     {isExternal ? (
@@ -164,7 +189,7 @@ export function ProjectCard({
                 </div>
               </CardHeader>
 
-              <CardContent className="pl-10 space-y-4 flex-grow">
+              <CardContent className="space-y-4 flex-grow">
                 {tags.length > 0 && (
                   <div>
                     <div className="flex flex-wrap gap-2">
@@ -176,7 +201,7 @@ export function ProjectCard({
                 )}
               </CardContent>
 
-              <CardFooter className="pl-10 pr-4 flex flex-col items-start gap-3">
+              <CardFooter className="pr-4 flex flex-col items-start gap-3">
                 {source === 'ideas' && (
                   <Button
                     onClick={(e) => {
@@ -201,35 +226,34 @@ export function ProjectCard({
           </Link>
 
           <div className="absolute top-2 right-2 flex items-center gap-2">
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-              <PopoverTrigger asChild>
+            <div className="w-16 text-center">
+              {isEditingProgress && source === 'ideas' ? (
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  value={localProgress}
+                  onChange={(e) => setLocalProgress(Number(e.target.value.replace(/[^0-9]/g, '')))}
+                  onBlur={handleProgressCommit}
+                  onKeyDown={handleProgressKeyDown}
+                  className="h-7 w-12 text-center text-sm px-1"
+                />
+              ) : (
                 <button
-                  onClick={(e) => e.preventDefault()} // prevent navigation
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (source === 'ideas') setIsEditingProgress(true);
+                  }}
                   disabled={source === 'completed'}
-                  className="text-sm font-bold text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
-                  aria-label="Open progress slider"
+                  className={cn(
+                    "text-sm font-bold",
+                    source === 'ideas' ? "text-primary cursor-pointer" : "text-muted-foreground cursor-not-allowed"
+                  )}
+                  aria-label="Edit progress"
                 >
-                  {source === 'completed' ? '100' : `${Math.round(localProgress ?? 0)}` }%
+                  {Math.round(localProgress ?? 0)}%
                 </button>
-              </PopoverTrigger>
-
-              {source === 'ideas' && (
-                <PopoverContent className="w-48 p-2">
-                  <p className="text-xs font-medium text-center mb-2">Set Progress</p>
-                  <Slider
-                    value={[localProgress ?? 0]}
-                    max={100}
-                    step={1}
-                    onValueChange={(value: number[]) => {
-                      if (Array.isArray(value) && typeof value[0] === 'number') {
-                        setLocalProgress(value[0]);
-                      }
-                    }}
-                    onValueCommit={(value: number[]) => handleSliderCommit(value)}
-                  />
-                </PopoverContent>
               )}
-            </Popover>
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -246,9 +270,9 @@ export function ProjectCard({
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                      <span className="text-destructive">Delete</span>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Delete</span>
                     </DropdownMenuItem>
                   </AlertDialogTrigger>
 

@@ -57,7 +57,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
     setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
      toast({
         title: 'Progress Updated',
-        description: `"${updatedProject.title}" progress set to ${updatedProject.progress}%.`,
+        description: `"${updatedProject.title}" progress saved.`,
       });
   }
 
