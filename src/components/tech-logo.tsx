@@ -11,106 +11,113 @@ interface TechLogoProps {
 }
 
 const DEVICON_MAP: Record<string, string> = {
-  // Languages
+  // Programming Languages
   cplusplus: 'cplusplus',
+  cpp: 'cplusplus',
   csharp: 'csharp',
-  javascript: 'javascript',
-  typescript: 'typescript',
+  'c#': 'csharp',
   python: 'python',
   java: 'java',
+  javascript: 'javascript',
+  js: 'javascript',
+  typescript: 'typescript',
+  ts: 'typescript',
   go: 'go',
+  golang: 'go',
   rust: 'rust',
   kotlin: 'kotlin',
   swift: 'swift',
+  dart: 'dart',
   php: 'php',
   ruby: 'ruby',
-  scala: 'scala',
-  haskell: 'haskell',
-  lua: 'lua',
-  perl: 'perl',
-  elixir: 'elixir',
-  clojure: 'clojure',
-  lisp: 'lisp',
-  crystal: 'crystal',
-  fsharp: 'fsharp',
-  erlang: 'erlang',
-  dart: 'dart',
-  html5: 'html5',
-  css3: 'css3',
-  sql: 'azuresqldatabase',
-  assembly: 'wasm', // Best guess for assembly
-  bash: 'bash',
-  powershell: 'powershell',
-  solidity: 'solidity',
-  vyper: 'vyper',
   r: 'r',
   julia: 'julia',
+  scala: 'scala',
+  haskell: 'haskell',
+  elixir: 'elixir',
+  perl: 'perl',
+  bash: 'bash',
+  shell: 'bash',
+  powershell: 'powershell',
+  assembly: 'wasm',
   verilog: 'verilog',
   vhdl: 'vhdl',
+  solidity: 'solidity',
+  vyper: 'vyper',
+  sql: 'azuresqldatabase',
+  nosql: 'mongodb',
   c: 'c',
 
-  // Frameworks & Libraries
-  react: 'react',
-  angular: 'angular',
-  vuejs: 'vuejs',
-  svelte: 'svelte',
-  nextjs: 'nextjs',
-  nuxtjs: 'nuxtjs',
-  gatsby: 'gatsby',
-  jquery: 'jquery',
+  // Web Frontend
+  html: 'html5',
+  css: 'css3',
   bootstrap: 'bootstrap',
   tailwindcss: 'tailwindcss',
-  'node.js': 'nodejs',
+  'tailwind css': 'tailwindcss',
+  react: 'react',
+  angular: 'angular',
+  vue: 'vuejs',
+  'vue.js': 'vuejs',
+  svelte: 'svelte',
+  nextjs: 'nextjs',
+  'next.js': 'nextjs',
+  nuxtjs: 'nuxtjs',
+  'nuxt.js': 'nuxtjs',
+  remix: 'remix',
+  jquery: 'jquery',
+
+  // Web Backend & Frameworks
   nodejs: 'nodejs',
+  'node.js': 'nodejs',
   express: 'express',
+  'express.js': 'express',
   django: 'django',
   flask: 'flask',
-  fastapi: 'fastapi',
-  spring: 'spring',
+  springboot: 'spring',
+  'spring boot': 'spring',
+  aspnet: 'dot-net',
+  'asp.net': 'dot-net',
   laravel: 'laravel',
-  '.net': 'dot-net',
-  dotnet: 'dot-net',
-  rails: 'rails',
-  redux: 'redux',
-  graphql: 'graphql',
-  jest: 'jest',
-  mocha: 'mocha',
-  cypress: 'cypress',
-  storybook: 'storybook',
-  vite: 'vite',
-  webpack: 'webpack',
-  babel: 'babel',
-  numpy: 'numpy',
-  pandas: 'pandas',
-  tensorflow: 'tensorflow',
-  pytorch: 'pytorch',
-  keras: 'keras',
-  scikitlearn: 'scikitlearn',
-  opencv: 'opencv',
+  rubyonrails: 'rails',
+  'ruby on rails': 'rails',
+  fastapi: 'fastapi',
   nestjs: 'nestjs',
-  gin: 'go', // No specific Gin logo, use Go
-  fiber: 'go', // No specific Fiber logo, use Go
-  seaborn: 'python', // Use python as fallback
-  matplotlib: 'python', // Use python as fallback
-  
+  gin: 'go',
+  fiber: 'go',
+
   // Databases
   mysql: 'mysql',
   postgresql: 'postgresql',
   sqlite: 'sqlite',
   mongodb: 'mongodb',
+  cassandra: 'cassandra',
   redis: 'redis',
   firebase: 'firebase',
   dynamodb: 'amazonwebservices',
-  cassandra: 'cassandra',
   neo4j: 'neo4j',
   elasticsearch: 'elasticsearch',
-  microsoftsqlserver: 'microsoftsqlserver',
-  supabase: 'supabase',
-  appwrite: 'appwrite',
-  prisma: 'prisma',
-  planetscale: 'planetscale',
-  
-  // DevOps & Tools
+
+  // Linux Distributions
+  linux: 'linux',
+  ubuntu: 'ubuntu',
+  debian: 'debian',
+  fedora: 'fedora',
+  archlinux: 'archlinux',
+  'arch linux': 'archlinux',
+  kalilinux: 'kalilinux',
+  'kali linux': 'kalilinux',
+  centos: 'centos',
+  rhel: 'redhat',
+  'red hat': 'redhat',
+  'red hat enterprise linux': 'redhat',
+  parrot: 'parrot',
+  'parrot os': 'parrot',
+  popos: 'popos',
+  'pop!_os': 'popos',
+  zorinos: 'zorinos',
+  'zorin os': 'zorinos',
+
+  // DevOps & Cloud
   git: 'git',
   github: 'github',
   gitlab: 'gitlab',
@@ -118,100 +125,392 @@ const DEVICON_MAP: Record<string, string> = {
   docker: 'docker',
   kubernetes: 'kubernetes',
   jenkins: 'jenkins',
-  travis: 'travisci',
-  circleci: 'circleci',
-  ansible: 'ansible',
   terraform: 'terraform',
-  vagrant: 'vagrant',
+  ansible: 'ansible',
+  cicd: 'githubactions',
+  'ci/cd': 'githubactions',
   nginx: 'nginx',
   apache: 'apache',
-  amazonwebservices: 'amazonwebservices',
   aws: 'amazonwebservices',
-  azure: 'azure',
-  googlecloud: 'googlecloud',
+  'amazon web services': 'amazonwebservices',
   gcp: 'googlecloud',
+  'google cloud': 'googlecloud',
+  'google cloud platform': 'googlecloud',
+  azure: 'azure',
+  'microsoft azure': 'azure',
   heroku: 'heroku',
-  digitalocean: 'digitalocean',
-  vercel: 'vercel',
   netlify: 'netlify',
-  linux: 'linux',
-  ubuntu: 'ubuntu',
-  debian: 'debian',
-  fedora: 'fedora',
-  centos: 'centos',
-  archlinux: 'archlinux',
-  blackarch: 'archlinux', // using archlinux for blackarch
-  kalilinux: 'kalilinux',
-  popos: 'pop',
-  'pop!_os': 'pop',
-  parrotos: 'parrot',
-  zorinos: 'zorin',
-  rhel: 'redhat',
-  redhat: 'redhat',
-  yarn: 'yarn',
-  npm: 'npm',
-  gulp: 'gulp',
-  grunt: 'grunt',
-  prometheus: 'prometheus',
-  grafana: 'grafana',
+  vercel: 'vercel',
+  digitalocean: 'digitalocean',
 
-  // Design & 3D
+  // Design & 3D Tools
   figma: 'figma',
   xd: 'xd',
+  'adobe xd': 'xd',
   photoshop: 'photoshop',
+  'adobe photoshop': 'photoshop',
   illustrator: 'illustrator',
+  'adobe illustrator': 'illustrator',
+  canva: 'canva',
+  webflow: 'webflow',
+  framer: 'framer',
   blender: 'blender',
   unity: 'unity',
   unrealengine: 'unrealengine',
+  'unreal engine': 'unrealengine',
   godot: 'godot',
-  webflow: 'webflow',
-  framer: 'framer',
-  canva: 'canva',
-  
-  // Editors
-  vscode: 'vscode',
-  pycharm: 'pycharm',
-  intellij: 'intellij',
-  androidstudio: 'androidstudio',
-  atom: 'atom',
-  sublimetext: 'sublimetext',
-  vim: 'vim',
-  neovim: 'neovim',
-  
-  // Other
+  cryengine: 'cryengine',
+  maya: 'maya',
+
+  // Data Science & ML
+  pandas: 'pandas',
+  numpy: 'numpy',
+  matplotlib: 'matplotlib',
+  seaborn: 'seaborn',
+  plotly: 'plotly',
+  scikitlearn: 'scikitlearn',
+  'scikit-learn': 'scikitlearn',
+  tensorflow: 'tensorflow',
+  pytorch: 'pytorch',
+  keras: 'keras',
+  opencv: 'opencv',
+  nltk: 'nltk',
+  spacy: 'spacy',
+  huggingface: 'huggingface',
+  'hugging face': 'huggingface',
+  transformers: 'huggingface',
+  statsmodels: 'statsmodels',
+  xgboost: 'xgboost',
+  lightgbm: 'lightgbm',
+  catboost: 'catboost',
   jupyter: 'jupyter',
+  jupyternotebook: 'jupyter',
+  'jupyter notebook': 'jupyter',
+  googlecolab: 'googlecolab',
+  'google colab': 'googlecolab',
+  anaconda: 'anaconda',
+  tableau: 'tableau',
+  powerbi: 'powerbi',
+  'power bi': 'powerbi',
+  excel: 'microsoftsqlserver',
+
+  // Big Data & Analytics
+  hadoop: 'hadoop',
+  'apache hadoop': 'hadoop',
+  spark: 'apachespark',
+  'apache spark': 'apachespark',
+  pyspark: 'apachespark',
+  kafka: 'apachekafka',
+  'apache kafka': 'apachekafka',
+  airflow: 'airflow',
+  'apache airflow': 'airflow',
+  snowflake: 'snowflake',
+  databricks: 'databricks',
+
+  // IoT & Embedded
   arduino: 'arduino',
   raspberrypi: 'raspberrypi',
+  'raspberry pi': 'raspberrypi',
+  matlab: 'matlab',
+  simulink: 'matlab',
+  ros: 'ros',
+  'robot operating system': 'ros',
+  opengl: 'opengl',
+  opengaigym: 'openai',
+  'openai gym': 'openai',
+  tensorboard: 'tensorflow',
+  mlflow: 'mlflow',
+
+  // Security Tools
+  wireshark: 'wireshark',
+  burpsuite: 'burpsuite',
+  'burp suite': 'burpsuite',
+  metasploit: 'metasploit',
+  nmap: 'nmap',
+  johntheripper: 'johntheripper',
+  'john the ripper': 'johntheripper',
+  hydra: 'hydra',
+  aircrackng: 'aircrackng',
+  'aircrack-ng': 'aircrackng',
+  hashcat: 'hashcat',
+  owaspzap: 'zap',
+  'owasp zap': 'zap',
+
+  // IDEs & Editors
+  vscode: 'vscode',
+  'vs code': 'vscode',
+  'visual studio code': 'vscode',
+  pycharm: 'pycharm',
+  intellij: 'intellij',
+  'intellij idea': 'intellij',
+  eclipse: 'eclipse',
+  androidstudio: 'androidstudio',
+  'android studio': 'androidstudio',
+  xcode: 'xcode',
+  atom: 'atom',
+  sublimetext: 'sublimetext',
+  'sublime text': 'sublimetext',
+  vim: 'vim',
+  neovim: 'neovim',
+  jupyterlab: 'jupyter',
+  'jupyter lab': 'jupyter',
+  rstudio: 'rstudio',
+
+  // Collaboration Tools
+  slack: 'slack',
+  discord: 'discord',
+  microsoftteams: 'microsoftteams',
+  'microsoft teams': 'microsoftteams',
+  notion: 'notion',
+  trello: 'trello',
+  jira: 'jira',
+  obsidian: 'obsidian',
+  googleworkspace: 'google',
+  'google workspace': 'google',
+  miro: 'miro',
+  lucidchart: 'lucidchart',
+  drawio: 'drawio',
+
+  // API & Web Services
+  restapi: 'restapi',
+  'rest api': 'restapi',
+  graphql: 'graphql',
+  postman: 'postman',
+  grpc: 'grpc',
+  swagger: 'swagger',
+  curl: 'curl',
+
+  // Cloud Services
+  awsec2: 'amazonwebservices',
+  'aws ec2': 'amazonwebservices',
+  awslambda: 'amazonwebservices',
+  'aws lambda': 'amazonwebservices',
+  s3: 'amazonwebservices',
+  cloudfront: 'amazonwebservices',
+  cloudflare: 'cloudflare',
+  firebasehosting: 'firebase',
+  'firebase hosting': 'firebase',
+
+  // ML Tools & Platforms
+  weightsbiases: 'weightsbiases',
+  'weights & biases': 'weightsbiases',
+  openai: 'openai',
+  'openai api': 'openai',
+  langchain: 'langchain',
+
+  // Build Tools
+  shellscripting: 'bash',
+  'shell scripting': 'bash',
+  batchscripting: 'windows',
+  'batch scripting': 'windows',
+  make: 'make',
+  cmake: 'cmake',
+  gradle: 'gradle',
+  maven: 'maven',
+
+  // Monitoring & Observability
+  helm: 'helm',
+  prometheus: 'prometheus',
+  grafana: 'grafana',
+  elasticstack: 'elasticsearch',
+  'elastic stack': 'elasticsearch',
+  elk: 'elasticsearch',
+
+  // Documentation
+  latex: 'latex',
+  overleaf: 'overleaf',
+  gitbook: 'gitbook',
+  markdown: 'markdown',
+
+  // Coding Platforms
+  leetcode: 'leetcode',
+  codeforces: 'codeforces',
+  hackerrank: 'hackerrank',
+  atcoder: 'atcoder',
+  codechef: 'codechef',
+  geeksforgeeks: 'geeksforgeeks',
+  hackerearth: 'hackerearth',
+
+  // Data Visualization
+  googledatastudio: 'googlecloud',
+  'google data studio': 'googlecloud',
+
+  // Virtualization
+  virtualbox: 'virtualbox',
+  vmware: 'vmware',
+  qemu: 'qemu',
+
+  // Shells
+  zsh: 'zsh',
+  fish: 'fish',
+  'fish shell': 'fish',
+
+  // Blockchain
+  blockchain: 'blockchain',
+  ethereum: 'ethereum',
+  smartcontracts: 'ethereum',
+  'smart contracts': 'ethereum',
+  web3js: 'web3js',
+  'web3.js': 'web3js',
+  ethersjs: 'ethers',
+
+  // Containerization
+  dockercompose: 'docker',
+  'docker compose': 'docker',
+  awscli: 'amazonwebservices',
+  'aws cli': 'amazonwebservices',
+  azurecli: 'azure',
+  'azure cli': 'azure',
+  gcpsdk: 'googlecloud',
+  'gcp sdk': 'googlecloud',
+
+  // Computer Vision
+  mediapipe: 'mediapipe',
+  yolo: 'yolo',
+  detectron2: 'detectron',
+
+  // NLP
+  bert: 'bert',
+  gpt: 'openai',
+  rasa: 'rasa',
+
+  // Big Data Processing
+  dask: 'dask',
+  hadoopmapreduce: 'hadoop',
+  'hadoop mapreduce': 'hadoop',
+
+  // Configuration Management
+  puppet: 'puppet',
+  chef: 'chef',
+  saltstack: 'saltstack',
+
+  // CI/CD Platforms
+  circleci: 'circleci',
+  travisci: 'travisci',
+  'travis ci': 'travisci',
+  githubactions: 'githubactions',
+  'github actions': 'githubactions',
+
+  // API Testing
+  insomnia: 'insomnia',
+
+  // Backend as a Service
+  supabase: 'supabase',
+  appwrite: 'appwrite',
+  planetscale: 'planetscale',
+  hasura: 'hasura',
+  prisma: 'prisma',
+
+  // Note-taking
+  roamresearch: 'roam',
+  'roam research': 'roam',
+  googlekeep: 'google',
+  'google keep': 'google',
+
+  // Mobile Development
   flutter: 'flutter',
+  reactnative: 'react',
   'react native': 'react',
+  ionic: 'ionic',
+  xamarin: 'xamarin',
+  swiftui: 'swift',
+  jetpackcompose: 'androidstudio',
+  'jetpack compose': 'androidstudio',
+
+  // Reinforcement Learning
+  stablebaselines: 'python',
+  'stable baselines': 'python',
+  gymnasium: 'python',
+  rllib: 'python',
+
+  // Data Processing
+  hive: 'hive',
+  pig: 'pig',
+  hbase: 'hbase',
+
+  // Robotics
+  gazebo: 'gazebo',
+  vrep: 'vrep',
+  tensorflowlite: 'tensorflow',
+  'tensorflow lite': 'tensorflow',
+  onnx: 'onnx',
+  coreml: 'apple',
+
+  // Version Control
+  gerrit: 'gerrit',
+
+  // Design Tools
+  sketch: 'sketch',
+  invision: 'invision',
+
+  // Documentation Platforms
+  googledocs: 'google',
+  'google docs': 'google',
+
+  // Cloud Providers
+  ibmcloud: 'ibm',
+  'ibm cloud': 'ibm',
+  oraclecloud: 'oracle',
+  'oracle cloud': 'oracle'
 };
 
-// Icons that should use the "original" (colored) version. Most plain icons are single-color and can be themed.
+// Icons that should use the "original" (colored) version
 const COLORED_ICONS = new Set([
-  'react', 'vuejs', 'nextjs', 'python', 'java', 'html5', 'css3', 
-  'javascript', 'typescript', 'svelte', 'angular', 'bootstrap',
-  'tailwindcss', 'nodejs', 'express', 'django', 'flask', 'spring',
-  'laravel', 'rails', 'flutter', 'linux', 'ubuntu', 'docker', 
-  'kubernetes', 'amazonwebservices', 'googlecloud', 'azure', 'firebase', 'figma',
-  'pandas', 'numpy', 'tensorflow', 'pytorch', 'jupyter', 'vscode',
-  'github', 'gitlab', 'mongodb', 'redis', 'mysql', 'postgresql',
-  'bootstrap', 'jquery', 'redux', 'graphql'
+  'c', 'cplusplus', 'python', 'java', 'javascript', 'typescript', 
+  'csharp', 'go', 'rust', 'kotlin', 'swift', 'dart', 'php', 
+  'ruby', 'r', 'julia', 'scala', 'haskell', 'elixir', 'html5', 
+  'css3', 'bash', 'powershell', 'solidity', 'vyper',
+  'react', 'vuejs', 'angular', 'svelte', 'nextjs', 'nuxtjs', 
+  'remix', 'jquery', 'bootstrap', 'tailwindcss',
+  'nodejs', 'express', 'django', 'flask', 'spring', 'dot-net', 
+  'laravel', 'rails', 'fastapi', 'nestjs',
+  'mysql', 'postgresql', 'sqlite', 'mongodb', 'cassandra', 
+  'redis', 'firebase', 'neo4j', 'elasticsearch',
+  'linux', 'ubuntu', 'debian', 'fedora', 'archlinux', 'kalilinux', 
+  'centos', 'redhat', 'parrot', 'popos', 'zorinos',
+  'git', 'github', 'gitlab', 'bitbucket', 'docker', 'kubernetes', 
+  'jenkins', 'terraform', 'ansible', 'nginx', 'apache', 
+  'amazonwebservices', 'googlecloud', 'azure', 'heroku', 
+  'netlify', 'vercel', 'digitalocean', 'cloudflare',
+  'figma', 'xd', 'photoshop', 'illustrator', 'canva', 'webflow', 
+  'framer', 'blender', 'unity', 'unrealengine', 'godot', 
+  'cryengine', 'maya', 'sketch',
+  'pandas', 'numpy', 'matplotlib', 'seaborn', 'plotly', 
+  'scikitlearn', 'tensorflow', 'pytorch', 'keras', 'opencv', 
+  'nltk', 'spacy', 'huggingface', 'statsmodels', 'xgboost', 
+  'lightgbm', 'catboost', 'jupyter', 'googlecolab', 'anaconda', 
+  'tableau', 'powerbi',
+  'hadoop', 'apachespark', 'apachekafka', 'airflow', 'snowflake', 
+  'databricks',
+  'arduino', 'raspberrypi', 'matlab', 'ros', 'opengl', 'openai',
+  'wireshark', 'burpsuite', 'metasploit', 'nmap', 'johntheripper', 
+  'hydra', 'aircrackng', 'hashcat', 'zap',
+  'vscode', 'pycharm', 'intellij', 'eclipse', 'androidstudio', 
+  'xcode', 'atom', 'sublimetext', 'vim', 'neovim', 'rstudio',
+  'slack', 'discord', 'microsoftteams', 'notion', 'trello', 
+  'jira', 'obsidian', 'miro', 'lucidchart', 'drawio',
+  'graphql', 'postman', 'swagger', 'grpc', 'curl',
+  'ethereum', 'web3js', 'ethers', 'blockchain',
+  'latex', 'markdown', 'gitbook', 'overleaf'
 ]);
 
 const getDeviconUrl = (courseName: string): { url: string | null, colored: boolean } => {
-  const nameLower = courseName.toLowerCase().replace(/ /g, '').replace(/[#.+]/g, '');
-  
-  // Sort keys by length descending to match more specific names first (e.g., "javascript" before "java")
+  const nameLower = courseName.toLowerCase().replace(/ /g, '');
+  const nameLowerNoSpecial = nameLower.replace(/[.#+]/g, '');
+
+  // Sort keys by length descending to match more specific names first
   const sortedKeys = Object.keys(DEVICON_MAP).sort((a, b) => b.length - a.length);
 
   for (const key of sortedKeys) {
-    if (nameLower.includes(key)) {
+    // Use the appropriate version of the course name for matching
+    const nameToMatch = (key.includes('#') || key.includes('+')) ? nameLower : nameLowerNoSpecial;
+    if (nameToMatch.includes(key.replace(/ /g, ''))) {
       const iconName = DEVICON_MAP[key];
-      // Use 'plain' for themeable single-color icons, and 'original' for iconic multi-color logos
-      const version = COLORED_ICONS.has(iconName) ? 'original' : 'plain';
+      const useOriginal = COLORED_ICONS.has(iconName);
+      const version = useOriginal ? 'original' : 'plain';
       return {
         url: `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-${version}.svg`,
-        colored: COLORED_ICONS.has(iconName)
+        colored: useOriginal
       };
     }
   }
@@ -224,7 +523,6 @@ const getFaviconUrl = (course: Course): string | null => {
     const firstUrl = course.links[0].url;
     if (firstUrl) {
       try {
-        // Ensure the URL has a protocol
         let fullUrl = firstUrl;
         if (!/^https?:\/\//i.test(fullUrl)) {
           fullUrl = 'https://' + fullUrl;
@@ -265,16 +563,16 @@ export function TechLogo({ course, className }: TechLogoProps) {
         height={48}
         className={cn(
           "rounded-sm object-contain",
-          // Only apply dark mode inversion to monochrome (plain) icons
           !colored && "dark:invert dark:opacity-90",
           className
         )}
         unoptimized
-        // Fallback to favicon if the devicon fails to load
         onError={(e) => {
           const faviconUrl = getFaviconUrl(course);
           if (faviconUrl) {
             (e.target as HTMLImageElement).src = faviconUrl;
+            // Remove the dark mode inversion if we fall back to a favicon
+            (e.target as HTMLImageElement).classList.remove("dark:invert", "dark:opacity-90");
           } else {
             (e.target as HTMLImageElement).style.display = 'none';
           }
