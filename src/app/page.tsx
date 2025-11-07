@@ -87,6 +87,8 @@ export default function Home() {
           status: p.status,
           progress: p.progress,
           tags: p.tags?.join(', '),
+          dueDate: p.dueDate,
+          repoUrl: p.repoUrl,
           links: JSON.stringify(p.links),
           requirements: Array.isArray(p.requirements) ? p.requirements.join('\\n') : p.requirements,
         })));
@@ -127,14 +129,11 @@ export default function Home() {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
         
-        if (data.ideas && data.completed && data.links) {
+        if (data.ideas || data.completed || data.links || data.courses) {
           setIdeas(data.ideas || []);
           setCompleted(data.completed || []);
           setLinks(data.links || []);
-          // Also import courses if they exist in the backup
-          if (data.courses) {
-            setCourses(data.courses);
-          }
+          setCourses(data.courses || []);
           toast({
             title: 'Import Successful',
             description: 'Your data has been restored from the backup.',

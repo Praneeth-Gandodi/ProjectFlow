@@ -25,7 +25,8 @@ import {
   Globe,
   Edit3,
   GitCommit,
-  Github
+  Github,
+  CalendarIcon
 } from 'lucide-react';
 import Image from 'next/image';
 import type { Project, Note, Link as LinkType } from '@/app/types';
@@ -35,7 +36,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { INITIAL_IDEAS, INITIAL_COMPLETED } from '@/app/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -113,7 +114,7 @@ export default function ProjectDetailsPage() {
   const validateWebsiteUrl = (url: string): boolean => {
     if (!url || !url.trim()) return false;
     try {
-      const urlObj = new URL(url);
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
       return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
     } catch {
       return false;
@@ -365,7 +366,8 @@ export default function ProjectDetailsPage() {
   };
 
   const handlePinKeyDown = (index: number, e: React.KeyboardEvent, isConfirm = false) => {
-    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+    const targetArray = isConfirm ? pinConfirmInput : pinInput;
+    if (e.key === 'Backspace' && !targetArray[index] && index > 0) {
       // Move to previous input on backspace
       pinInputRefs.current[index - 1]?.focus();
     }
@@ -630,7 +632,7 @@ export default function ProjectDetailsPage() {
     const pAny = project as any;
     const repoUrl = pAny.repoUrl || pAny.githubUrl || pAny.repository;
     
-    if (repoUrl) {
+    if (repoUrl && validateWebsiteUrl(repoUrl)) {
       window.open(repoUrl, '_blank');
     } else {
       toast({
@@ -706,6 +708,12 @@ export default function ProjectDetailsPage() {
 
   const logoSrc = (project as any).logo || `https://picsum.photos/seed/${project.id}/800/800`;
   const progress = (project as any).progress ?? 0;
+  
+  const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+  const isCompleted = completed.some(p => p.id === project.id);
+  const isOverdue = dueDate && isPast(dueDate) && !isCompleted;
+  const isSoon = dueDate && isWithinInterval(dueDate, { start: new Date(), end: addDays(new Date(), 7) }) && !isCompleted;
+
 
   return (
     <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
@@ -736,6 +744,17 @@ export default function ProjectDetailsPage() {
                   {progress}%
                 </Badge>
               </div>
+              {dueDate && (
+                <div
+                  className={cn(
+                    'flex items-center gap-1.5 text-xs font-medium',
+                    isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span>{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d, yyyy')}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1357,8 +1376,7 @@ export default function ProjectDetailsPage() {
                       onChange={(e) => editingKey ? 
                         setEditingKey({...editingKey, description: e.target.value}) : 
                         setNewKeyDescription(e.target.value)
-                      } 
-                      placeholder="Optional description or notes about this API key" 
+                      }                       placeholder="Optional description or notes about this API key" 
                       rows={3} 
                     />
                   </div>

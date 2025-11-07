@@ -3,7 +3,7 @@
 ## 1. Project Overview
 
 **Project Name**: ProjectFlow
-**Description**: A single-user, browser-based project management and idea-tracking application. It uses the browser's `localStorage` for all data persistence, meaning there is no backend database. The application is built as a Single Page Application (SPA) experience using Next.js with the App Router.
+**Description**: A single-user, browser-based project management, idea tracking, and learning dashboard. It uses the browser's `localStorage` for all data persistence. The application is built as a Single Page Application (SPA) experience using Next.js with the App Router.
 
 ## 2. Core Technologies & Libraries
 
@@ -11,93 +11,80 @@
 - **Language**: TypeScript
 - **UI Library**: React 18+
 - **Styling**: Tailwind CSS with `tailwindcss-animate`.
-- **UI Components**: `shadcn/ui`. Component primitives are from Radix UI.
-  - **Location**: Base components are in `src/components/ui/` and application-specific components are in `src/components/`.
+- **UI Components**: `shadcn/ui`. Located in `src/components/ui/`.
 - **Icons**: `lucide-react`.
 - **State Management**:
   - **Local State**: `useState`, `useReducer`.
   - **Shared State (Cross-Component)**: React Context (`src/context/`).
-  - **Persistent State**: A custom hook, `useLocalStorage` (`src/hooks/use-local-storage.ts`), is used to persist all user data in the browser's `localStorage`. This is the primary data persistence mechanism.
+  - **Persistent State**: A custom hook, `useLocalStorage` (`src/hooks/use-local-storage.ts`), is the **single source of truth** for all data persistence in `localStorage`.
 - **Forms**: `react-hook-form` for form state management and `zod` for schema validation.
-- **Drag & Drop**: `react-dnd` with `react-dnd-html5-backend` is used for reordering projects.
+- **Drag & Drop**: `react-dnd` with `react-dnd-html5-backend` for reordering projects, links, and courses.
 - **Data Parsing**: `papaparse` is used for exporting data to CSV format.
-- **Linting & Formatting**: Standard Next.js configuration with ESLint and TypeScript.
 
 ## 3. Key Architectural Patterns
 
 ### Data Persistence (`useLocalStorage`)
 
-- **CRITICAL**: The entire application state (projects, links, user profile, etc.) is persisted in the browser's `localStorage`.
+- **CRITICAL**: The entire application state (projects, courses, links, user profile, etc.) is persisted in the browser's `localStorage`.
 - The `useLocalStorage` hook (`src/hooks/use-local-storage.ts`) is the **single source of truth** for reading and writing persistent data.
-- The hook returns `[value, setValue, isLoaded]`. The `isLoaded` boolean is crucial for preventing hydration errors and race conditions. Components must wait for `isLoaded` to be `true` before attempting to render data-dependent UI.
+- The hook returns `[value, setValue, isLoaded]`. Components must wait for `isLoaded` to be `true` before rendering data-dependent UI to avoid hydration errors.
 - Initial data for new users is sourced from `src/app/data.ts`.
 
 ### Global State (React Context)
 
-- **`ProfileProvider` (`src/context/profile-context.tsx`)**: Manages user profile information (name, avatar, github) and UI preferences (font, layout). This context uses `useLocalStorage` internally.
-- **`PinProvider` (`src/context/pin-context.tsx`)**: Manages the application's PIN lock state, including the PIN itself, lock status, and unlock attempts. This also uses `useLocalStorage`.
+- **`ProfileProvider` (`src/context/profile-context.tsx`)**: Manages user profile information (name, avatar, github) and UI preferences (font, layout).
+- **`PinProvider` (`src/context/pin-context.tsx`)**: Manages the application's global PIN lock state.
 
 ### Routing (Next.js App Router)
 
-- **`src/app/layout.tsx`**: The root layout. It wraps the entire application and includes global context providers (`PinProvider`, `ProfileProvider`) and the `Toaster` for notifications.
-- **`src/app/page.tsx`**: The main dashboard page. This is a client component (`'use client'`) that fetches all data via `useLocalStorage` and renders the project tabs and stats.
-- **`src/app/project/[id]/page.tsx`**: A dynamic route for displaying and editing a single project.
-  - The `[id]` segment in the URL corresponds to the `project.id`.
-  - This page fetches all projects from `localStorage` and then finds the specific project by its `id`.
+- **`src/app/layout.tsx`**: The root layout, containing global context providers and the `Toaster`.
+- **`src/app/page.tsx`**: The main dashboard page (`'use client'`). It fetches all data via `useLocalStorage` and renders the main tabs. It also contains the master import/export logic.
+- **`src/app/project/[id]/page.tsx`**: Dynamic route for displaying and editing a single project. This page includes the logic for the project-specific PIN-locked API key storage.
+- **`src/app/course/[id]/page.tsx`**: Dynamic route for displaying and editing a single learning course.
 
 ## 4. Data Structures (`src/app/types.ts`)
 
-- **`Project`**: The core data model.
-  - `id`: Unique string identifier.
-  - `title`, `description`: string.
-  - `requirements`: An array of objects: `{ id: string; text: string; completed: boolean; }`.
-  - `links`: An array of `Link` objects.
-  - `notes`: An array of `Note` objects.
-  - `progress`: number (0-100).
-  - `tags`: `string[]`.
+- **`Project`**: Core model for projects. Includes `id`, `title`, `description`, `requirements`, `links`, `notes`, `progress`, `tags`, `repoUrl`, `dueDate`, and PIN-protected `apiKeys`.
+- **`Course`**: Core model for learning. Includes `id`, `name`, `completed`, `links`, `notes`, and `reason`.
 - **`Link`**: `{ id?: string; title: string; url: string; description?: string; }`
 - **`Note`**: `{ id: string; date: string; content: string; }`
-- **`Requirement`**: `{ id: string; text: string; completed: boolean; }`
 
 ## 5. File-by-File Breakdown for Editing
 
 - **To change the main dashboard UI**:
-  - Edit **`src/app/page.tsx`**. This file controls the layout of the dashboard, including the stats and tabs.
+  - Edit **`src/app/page.tsx`**. This file controls the layout of the dashboard, including the stats and the four main `Tabs` ("Ideas", "Completed", "Links", "Learning").
 
-- **To change the project detail page UI**:
-  - Edit **`src/app/project/[id]/page.tsx`**. This file controls the display and editing functionality for a single project.
+- **To change the project detail page (including API Key section)**:
+  - Edit **`src/app/project/[id]/page.tsx`**. This file controls the display, editing, and secure storage functionality for a single project.
 
-- **To change the application's color scheme or global styles**:
-  - Edit **`src/app/globals.css`**. Modify the HSL CSS variables within the `:root` and `.dark` blocks.
+- **To change the course detail page**:
+  - Edit **`src/app/course/[id]/page.tsx`**.
 
-- **To add/modify properties on a `Project` or other data model**:
+- **To add/modify properties on a `Project`, `Course`, or other data model**:
   1.  Update the interface in **`src/app/types.ts`**.
   2.  Update the components that use this data, primarily:
-      - **`src/app/project/[id]/page.tsx`** (detail view).
-      - **`src/components/project-card.tsx`** (card view on dashboard).
-      - **`src/components/project-form.tsx`** (add/edit modal).
+      - `src/app/project/[id]/page.tsx` (project detail)
+      - `src/app/course/[id]/page.tsx` (course detail)
+      - `src/components/project-card.tsx` / `src/components/course-card.tsx` (card views)
+      - `src/components/project-form.tsx` / `src/components/course-form.tsx` (add/edit modals).
   3.  Update the initial data in **`src/app/data.ts`** to reflect the new structure.
 
-- **To change the Header (logo, search, profile menu)**:
-  - Edit **`src/components/app-header.tsx`**.
+- **To change the Header**:
+  - Edit **`src/components/app-header.tsx`**. Note: The search bar is not yet implemented in the header.
   - The profile dropdown logic is in **`src/components/profile-menu.tsx`**.
 
-- **To change the "Add/Edit Project" modal form**:
-  - Edit **`src/components/project-form.tsx`**. This includes form fields, tabs, and submission logic.
+- **To change the "Add/Edit Project" modal**:
+  - Edit **`src/components/project-form.tsx`**. This includes the due date picker.
 
-- **To change the "Add/Edit Link" modal form**:
-  - Edit **`src/components/link-form.tsx`**.
+- **To change the "Add/Edit Course" modal**:
+  - Edit **`src/components/course-form.tsx`**.
 
-- **To modify the application's fonts**:
-  1.  Add/change font links in **`src/app/layout.tsx`**.
-  2.  Update the font families in **`tailwind.config.ts`**.
+- **To modify drag-and-drop behavior**:
+  - The logic is co-located within the card (`project-card.tsx`, `link-card.tsx`, `course-card.tsx`) and the list (`project-list.tsx`, `link-tab.tsx`, `learning-tab.tsx`).
 
-- **To modify the PIN lock screen**:
-  - Edit **`src/components/app-lock.tsx`**.
+## 6. Common Tasks & Gotchas
 
-## 6. Common Tasks
-
-- **Adding a new component**: Create a new `.tsx` file in `src/components/` and import it where needed. For UI primitives, use `shadcn/ui` components from `src/components/ui/`.
-- **Handling User Interactions**: Most interactions are handled within the components themselves (e.g., `onClick` handlers). State changes that need to persist are propagated up to the page component (`page.tsx`) and saved using the `set...` function from a `useLocalStorage` hook.
+- **Handling User Interactions**: State changes that need to persist are propagated up to the page component (`page.tsx`) and saved using the `set...` function from a `useLocalStorage` hook.
 - **Fixing a Data-Related Bug**: The first place to investigate is the `useLocalStorage` hook usage in the relevant component. Ensure `isLoaded` is correctly handled. Check `src/app/types.ts` for data structure mismatches.
 - **Changing Theme Colors**: All theme colors are defined as CSS variables in `src/app/globals.css`. Adjusting these HSL values is the correct way to theme the application.
+- **API Key Security**: The API keys are "secured" by a PIN within the local storage context. This is obfuscation, not true encryption. Advise the user that this protects against casual observation but is not a replacement for a secure backend vault.
