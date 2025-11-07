@@ -43,6 +43,10 @@ const DEVICON_MAP: Record<string, string> = {
   powershell: 'powershell',
   solidity: 'solidity',
   vyper: 'vyper',
+  r: 'r',
+  julia: 'julia',
+  verilog: 'verilog',
+  vhdl: 'vhdl',
 
   // Frameworks & Libraries
   react: 'react',
@@ -82,7 +86,25 @@ const DEVICON_MAP: Record<string, string> = {
   keras: 'keras',
   scikitlearn: 'scikitlearn',
   opencv: 'opencv',
-
+  nestjs: 'nestjs',
+  gin: 'go', // No specific Gin logo, use Go
+  fiber: 'go', // No specific Fiber logo, use Go
+  seaborn: 'python', // Use python as fallback
+  matplotlib: 'python', // Use python as fallback
+  
+  // Databases
+  mysql: 'mysql',
+  postgresql: 'postgresql',
+  sqlite: 'sqlite',
+  mongodb: 'mongodb',
+  redis: 'redis',
+  firebase: 'firebase',
+  dynamodb: 'amazonwebservices',
+  cassandra: 'cassandra',
+  neo4j: 'neo4j',
+  elasticsearch: 'elasticsearch',
+  microsoftsqlserver: 'microsoftsqlserver',
+  
   // DevOps & Tools
   git: 'git',
   github: 'github',
@@ -98,12 +120,6 @@ const DEVICON_MAP: Record<string, string> = {
   vagrant: 'vagrant',
   nginx: 'nginx',
   apache: 'apache',
-  redis: 'redis',
-  mongodb: 'mongodb',
-  mysql: 'mysql',
-  postgresql: 'postgresql',
-  sqlite: 'sqlite',
-  microsoftsqlserver: 'microsoftsqlserver',
   amazonwebservices: 'amazonwebservices',
   aws: 'amazonwebservices',
   azure: 'azure',
@@ -113,19 +129,22 @@ const DEVICON_MAP: Record<string, string> = {
   digitalocean: 'digitalocean',
   vercel: 'vercel',
   netlify: 'netlify',
-  bash: 'bash',
-  powershell: 'powershell',
   linux: 'linux',
   ubuntu: 'ubuntu',
   debian: 'debian',
   fedora: 'fedora',
   centos: 'centos',
   archlinux: 'archlinux',
+  blackarch: 'archlinux',
   kalilinux: 'kalilinux',
+  rhel: 'redhat',
+  redhat: 'redhat',
   yarn: 'yarn',
   npm: 'npm',
   gulp: 'gulp',
   grunt: 'grunt',
+
+  // Design & 3D
   figma: 'figma',
   xd: 'xd',
   photoshop: 'photoshop',
@@ -136,11 +155,41 @@ const DEVICON_MAP: Record<string, string> = {
   godot: 'godot',
   webflow: 'webflow',
   framer: 'framer',
-  selenium: 'selenium',
+  canva: 'canva',
+  
+  // Editors
+  vscode: 'vscode',
+  pycharm: 'pycharm',
+  intellij: 'intellij',
+  androidstudio: 'androidstudio',
+  atom: 'atom',
+  sublimetext: 'sublimetext',
+  vim: 'vim',
+  neovim: 'neovim',
+  
+  // Other
+  jupyter: 'jupyter',
+  arduino: 'arduino',
+  raspberrypi: 'raspberrypi',
+  
+  // Fallbacks
+  c: 'c',
 };
 
-const getDeviconUrl = (courseName: string): string | null => {
-  const nameLower = courseName.toLowerCase().replace(/ /g, '');
+// Icons that should use the "original" (colored) version
+const COLORED_ICONS = new Set([
+  'react', 'vuejs', 'nextjs', 'python', 'java', 'html5', 'css3', 
+  'javascript', 'typescript', 'svelte', 'angular', 'bootstrap',
+  'tailwindcss', 'nodejs', 'express', 'django', 'flask', 'spring',
+  'laravel', 'rails', 'flutter', 'linux', 'ubuntu', 'docker', 
+  'kubernetes', 'amazonwebservices', 'googlecloud', 'azure', 'firebase', 'figma',
+  'pandas', 'numpy', 'tensorflow', 'pytorch', 'jupyter', 'vscode',
+  'github', 'gitlab', 'mongodb', 'redis', 'mysql', 'postgresql',
+  'bootstrap', 'jquery', 'redux', 'graphql'
+]);
+
+const getDeviconUrl = (courseName: string): { url: string | null, colored: boolean } => {
+  const nameLower = courseName.toLowerCase().replace(/ /g, '').replace(/[#.+]/g, '');
   
   // Sort keys by length descending to match more specific names first (e.g., "javascript" before "java")
   const sortedKeys = Object.keys(DEVICON_MAP).sort((a, b) => b.length - a.length);
@@ -148,11 +197,16 @@ const getDeviconUrl = (courseName: string): string | null => {
   for (const key of sortedKeys) {
     if (nameLower.includes(key)) {
       const iconName = DEVICON_MAP[key];
-      return `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-plain.svg`;
+      // For plain icons, we don't want colored versions, just the single-path svg
+      const version = COLORED_ICONS.has(iconName) ? 'original' : 'plain';
+      return {
+        url: `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-${version}.svg`,
+        colored: COLORED_ICONS.has(iconName)
+      };
     }
   }
 
-  return null;
+  return { url: null, colored: false };
 };
 
 const getFaviconUrl = (course: Course): string | null => {
@@ -173,25 +227,55 @@ const getFaviconUrl = (course: Course): string | null => {
 export function TechLogo({ course, className }: TechLogoProps) {
   // Priority 1: Manual Logo
   if (course.logo) {
-    return <Image src={course.logo} alt={course.name} width={48} height={48} className={cn("rounded-sm object-contain", className)} unoptimized />;
+    return (
+      <Image 
+        src={course.logo} 
+        alt={course.name} 
+        width={48} 
+        height={48} 
+        className={cn("rounded-sm object-contain", className)} 
+        unoptimized 
+      />
+    );
   }
 
   // Priority 2: Devicon
-  const deviconUrl = getDeviconUrl(course.name);
+  const { url: deviconUrl, colored } = getDeviconUrl(course.name);
   if (deviconUrl) {
     return (
-        <img 
-            src={deviconUrl} 
-            alt={course.name}
-            className={cn("rounded-sm object-contain", className)}
-        />
+      <Image
+        src={deviconUrl}
+        alt={course.name}
+        width={48}
+        height={48}
+        className={cn(
+          "rounded-sm object-contain",
+          // Only apply dark mode inversion to monochrome (plain) icons
+          !colored && "dark:invert dark:opacity-90",
+          className
+        )}
+        unoptimized
+        onError={(e) => {
+          // If the Devicon fails to load, hide it to allow fallback to favicon
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
     );
   }
 
   // Priority 3: Favicon
   const faviconUrl = getFaviconUrl(course);
   if (faviconUrl) {
-    return <Image src={faviconUrl} alt={course.name} width={48} height={48} className={cn("rounded-sm object-contain", className)} />;
+    return (
+      <Image 
+        src={faviconUrl} 
+        alt={course.name} 
+        width={48} 
+        height={48} 
+        className={cn("rounded-sm object-contain", className)} 
+        unoptimized
+      />
+    );
   }
 
   // Priority 4: Fallback
