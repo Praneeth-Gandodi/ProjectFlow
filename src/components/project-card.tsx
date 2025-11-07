@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Project } from '@/app/types';
@@ -25,7 +24,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
-
 
 interface ProjectCardProps {
   project: Project;
@@ -163,75 +161,84 @@ export function ProjectCard({
           <GripVertical size={20} />
         </div>
 
-        <Card className="w-full h-full flex flex-col pl-8">
-          <div className="flex flex-col flex-grow">
-            <CardHeader className="pr-4 pb-4">
-              <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                      <Link href={`/project/${project.id}`}>
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                              {isExternal ? (
-                                  <img
-                                      src={logoSrc}
-                                      alt={`${safeTitle} logo`}
-                                      width={64}
-                                      height={64}
-                                      className="w-16 h-16 object-cover"
-                                      onError={handleImgError}
-                                      loading="lazy"
-                                  />
-                              ) : (
-                                  <Image
-                                      src={logoSrc}
-                                      alt={`${safeTitle} logo`}
-                                      width={64}
-                                      height={64}
-                                      className="rounded-lg border object-cover"
-                                      unoptimized
-                                  />
-                              )}
-                          </div>
-                      </Link>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                      <Link href={`/project/${project.id}`}>
-                          <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
-                      </Link>
-                  </div>
+        <Card className="group/card w-full h-full flex flex-col pl-8">
+          <Link href={`/project/${project.id}`} className="contents">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                  {isExternal ? (
+                    <img
+                      src={logoSrc}
+                      alt={`${safeTitle} logo`}
+                      width={64}
+                      height={64}
+                      className="w-16 h-16 object-cover"
+                      onError={handleImgError}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Image
+                      src={logoSrc}
+                      alt={`${safeTitle} logo`}
+                      width={64}
+                      height={64}
+                      className="rounded-lg border object-cover"
+                      unoptimized
+                    />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="font-headline text-lg group-hover:underline">{safeTitle}</CardTitle>
+                  <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                </div>
               </div>
             </CardHeader>
+          </Link>
 
-            <CardContent className="space-y-4 flex-grow pt-0">
-               <Link href={`/project/${project.id}`} className="block h-full">
-                {tags.length > 0 && (
-                  <div>
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">{tag}</Badge>
-                      ))}
-                    </div>
-                  </div>
+          <CardContent className="space-y-4 flex-grow">
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                ))}
+              </div>
+            )}
+             {dueDate && source === 'ideas' && (
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 text-xs font-medium pt-2',
+                  isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
                 )}
-               </Link>
-            </CardContent>
+              >
+                <CalendarIcon className="h-3.5 w-3.5" />
+                <span>{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d, yyyy')}</span>
+              </div>
+            )}
+          </CardContent>
 
-            <CardFooter className="pt-4">
-                 {dueDate && source === 'ideas' && (
-                  <div
-                    className={cn(
-                      'flex items-center gap-1.5 text-xs font-medium',
-                      isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    <span>{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d')}</span>
-                  </div>
-                )}
-            </CardFooter>
-          </div>
+          <CardFooter className="flex flex-col items-start gap-3">
+            {source === 'ideas' && (
+              <Button
+                onClick={() => {
+                  try {
+                    onMarkAsCompleted(project);
+                  } catch (err) {
+                    console.error('Mark as completed failed', err);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full"
+                aria-label={`Mark ${safeTitle} as completed`}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Mark as Completed
+              </Button>
+            )}
+          </CardFooter>
 
-          <div className="absolute top-2 right-2 flex items-center gap-1">
+          <div className="absolute top-2 right-2 flex items-center gap-2">
             <div className="w-16 text-center">
               {isEditingProgress && source === 'ideas' ? (
                 <Input
@@ -256,29 +263,14 @@ export function ProjectCard({
                   )}
                   aria-label="Edit progress"
                 >
-                  {Math.round(localProgress ?? 0)}%
+                  {source === 'completed' ? '100' : `${Math.round(localProgress ?? 0)}` }%
                 </button>
               )}
             </div>
 
-            {source === 'ideas' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onMarkAsCompleted(project);
-                }}
-                aria-label={`Mark ${safeTitle} as completed`}
-              >
-                <CheckCircle className="h-5 w-5 text-muted-foreground hover:text-green-600" />
-              </Button>
-            )}
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions" onClick={(e) => e.preventDefault()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
                   <MoreVertical size={16} />
                 </Button>
               </DropdownMenuTrigger>
@@ -300,7 +292,7 @@ export function ProjectCard({
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Delete</span>
+                      <span className="text-destructive">Delete</span>
                     </DropdownMenuItem>
                   </AlertDialogTrigger>
 
