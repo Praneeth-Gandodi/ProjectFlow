@@ -495,18 +495,18 @@ const COLORED_ICONS = new Set([
 ]);
 
 const getDeviconUrl = (courseName: string): { url: string | null, colored: boolean } => {
-  const nameLower = courseName.toLowerCase().replace(/ /g, '');
-  const nameLowerNoSpecial = nameLower.replace(/[.#+]/g, '');
+  const nameLower = courseName.toLowerCase();
+  const nameLowerNoSpecial = nameLower.replace(/[.#+]/g, '').replace(/ /g, '');
 
   // Sort keys by length descending to match more specific names first
   const sortedKeys = Object.keys(DEVICON_MAP).sort((a, b) => b.length - a.length);
 
   for (const key of sortedKeys) {
-    // Use the appropriate version of the course name for matching
-    const nameToMatch = (key.includes('#') || key.includes('+')) ? nameLower : nameLowerNoSpecial;
-    if (nameToMatch.includes(key.replace(/ /g, ''))) {
+    const processedKey = key.replace(/ /g, '');
+    if (nameLowerNoSpecial.includes(processedKey)) {
       const iconName = DEVICON_MAP[key];
       const useOriginal = COLORED_ICONS.has(iconName);
+      // Prefer 'plain' for non-colored, 'original' for colored
       const version = useOriginal ? 'original' : 'plain';
       return {
         url: `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-${version}.svg`,
