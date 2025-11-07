@@ -170,7 +170,7 @@ export default function Home() {
           onChange={handleImport}
         />
 
-        <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-7xl' : 'max-w-5xl' )}>
+        <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-screen-2xl' : 'max-w-7xl' )}>
           <DashboardStats 
             ideasCount={(ideas || []).length} 
             completedCount={(completed || []).length}

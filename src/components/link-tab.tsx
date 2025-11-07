@@ -58,7 +58,7 @@ export function LinkTab({ links, setLinks }: LinkTabProps) {
           <Plus className="mr-2 h-4 w-4" /> Add Link
         </Button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         {links.map(link => (
           <LinkCard 
             key={link.id} 
