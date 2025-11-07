@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from './ui/badge';
 import { TechLogo } from './tech-logo';
+import { cn } from '@/lib/utils';
 
 interface CourseCardProps {
   course: Course;
@@ -34,8 +35,8 @@ export function CourseCard({ course, onEdit, onDelete, onToggleComplete }: Cours
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <TechLogo course={course} className="w-12 h-12" />
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <TechLogo course={course} className="w-12 h-12 flex-shrink-0" />
             <div className="flex-1">
               <CardTitle className="font-headline text-lg">{course.name}</CardTitle>
               {course.completed && (
@@ -46,53 +47,45 @@ export function CourseCard({ course, onEdit, onDelete, onToggleComplete }: Cours
               )}
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                <MoreVertical size={16} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                <span>Edit</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggleComplete}>
-                {course.completed ? (
-                  <>
-                    <Circle className="mr-2 h-4 w-4" />
-                    <span>Mark as Incomplete</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    <span>Mark as Completed</span>
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete this course.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center flex-shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleComplete}>
+              <CheckCircle className={cn("h-5 w-5", course.completed ? "text-green-600 fill-green-100 dark:fill-green-900" : "text-muted-foreground")} />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this course.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-grow">

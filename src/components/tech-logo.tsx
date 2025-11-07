@@ -12,16 +12,17 @@ interface TechLogoProps {
 
 const DEVICON_MAP: Record<string, string> = {
   // Programming Languages
+  c: 'c',
   cplusplus: 'cplusplus',
   cpp: 'cplusplus',
-  csharp: 'csharp',
-  'c#': 'csharp',
   python: 'python',
   java: 'java',
   javascript: 'javascript',
   js: 'javascript',
   typescript: 'typescript',
   ts: 'typescript',
+  csharp: 'csharp',
+  'c#': 'csharp',
   go: 'go',
   golang: 'go',
   rust: 'rust',
@@ -46,7 +47,6 @@ const DEVICON_MAP: Record<string, string> = {
   vyper: 'vyper',
   sql: 'azuresqldatabase',
   nosql: 'mongodb',
-  c: 'c',
 
   // Web Frontend
   html: 'html5',
@@ -414,6 +414,7 @@ const DEVICON_MAP: Record<string, string> = {
   ionic: 'ionic',
   xamarin: 'xamarin',
   swiftui: 'swift',
+  'swiftui': 'swift',
   jetpackcompose: 'androidstudio',
   'jetpack compose': 'androidstudio',
 
@@ -456,57 +457,85 @@ const DEVICON_MAP: Record<string, string> = {
 
 // Icons that should use the "original" (colored) version
 const COLORED_ICONS = new Set([
+  // Languages
   'c', 'cplusplus', 'python', 'java', 'javascript', 'typescript', 
   'csharp', 'go', 'rust', 'kotlin', 'swift', 'dart', 'php', 
   'ruby', 'r', 'julia', 'scala', 'haskell', 'elixir', 'html5', 
   'css3', 'bash', 'powershell', 'solidity', 'vyper',
+  
+  // Frontend & Frameworks
   'react', 'vuejs', 'angular', 'svelte', 'nextjs', 'nuxtjs', 
   'remix', 'jquery', 'bootstrap', 'tailwindcss',
+  
+  // Backend
   'nodejs', 'express', 'django', 'flask', 'spring', 'dot-net', 
   'laravel', 'rails', 'fastapi', 'nestjs',
+  
+  // Databases
   'mysql', 'postgresql', 'sqlite', 'mongodb', 'cassandra', 
   'redis', 'firebase', 'neo4j', 'elasticsearch',
+  
+  // Linux & DevOps
   'linux', 'ubuntu', 'debian', 'fedora', 'archlinux', 'kalilinux', 
   'centos', 'redhat', 'parrot', 'popos', 'zorinos',
+  
+  // Cloud & DevOps Tools
   'git', 'github', 'gitlab', 'bitbucket', 'docker', 'kubernetes', 
   'jenkins', 'terraform', 'ansible', 'nginx', 'apache', 
   'amazonwebservices', 'googlecloud', 'azure', 'heroku', 
   'netlify', 'vercel', 'digitalocean', 'cloudflare',
+  
+  // Design & 3D
   'figma', 'xd', 'photoshop', 'illustrator', 'canva', 'webflow', 
   'framer', 'blender', 'unity', 'unrealengine', 'godot', 
   'cryengine', 'maya', 'sketch',
+  
+  // Data Science & ML
   'pandas', 'numpy', 'matplotlib', 'seaborn', 'plotly', 
   'scikitlearn', 'tensorflow', 'pytorch', 'keras', 'opencv', 
   'nltk', 'spacy', 'huggingface', 'statsmodels', 'xgboost', 
   'lightgbm', 'catboost', 'jupyter', 'googlecolab', 'anaconda', 
   'tableau', 'powerbi',
+  
+  // Big Data
   'hadoop', 'apachespark', 'apachekafka', 'airflow', 'snowflake', 
   'databricks',
+  
+  // IoT & Embedded
   'arduino', 'raspberrypi', 'matlab', 'ros', 'opengl', 'openai',
+  
+  // Security
   'wireshark', 'burpsuite', 'metasploit', 'nmap', 'johntheripper', 
   'hydra', 'aircrackng', 'hashcat', 'zap',
+  
+  // IDEs & Editors
   'vscode', 'pycharm', 'intellij', 'eclipse', 'androidstudio', 
   'xcode', 'atom', 'sublimetext', 'vim', 'neovim', 'rstudio',
+  
+  // Collaboration
   'slack', 'discord', 'microsoftteams', 'notion', 'trello', 
   'jira', 'obsidian', 'miro', 'lucidchart', 'drawio',
+  
+  // API & Services
   'graphql', 'postman', 'swagger', 'grpc', 'curl',
+  
+  // Blockchain
   'ethereum', 'web3js', 'ethers', 'blockchain',
+  
+  // Documentation
   'latex', 'markdown', 'gitbook', 'overleaf'
 ]);
 
 const getDeviconUrl = (courseName: string): { url: string | null, colored: boolean } => {
-  const nameLower = courseName.toLowerCase();
-  const nameLowerNoSpecial = nameLower.replace(/[.#+]/g, '').replace(/ /g, '');
-
+  const nameLower = courseName.toLowerCase().replace(/ /g, '').replace(/[#.+]/g, '');
+  
   // Sort keys by length descending to match more specific names first
   const sortedKeys = Object.keys(DEVICON_MAP).sort((a, b) => b.length - a.length);
 
   for (const key of sortedKeys) {
-    const processedKey = key.replace(/ /g, '');
-    if (nameLowerNoSpecial.includes(processedKey)) {
+    if (nameLower.includes(key)) {
       const iconName = DEVICON_MAP[key];
       const useOriginal = COLORED_ICONS.has(iconName);
-      // Prefer 'plain' for non-colored, 'original' for colored
       const version = useOriginal ? 'original' : 'plain';
       return {
         url: `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${iconName}-${version}.svg`,
@@ -571,8 +600,6 @@ export function TechLogo({ course, className }: TechLogoProps) {
           const faviconUrl = getFaviconUrl(course);
           if (faviconUrl) {
             (e.target as HTMLImageElement).src = faviconUrl;
-            // Remove the dark mode inversion if we fall back to a favicon
-            (e.target as HTMLImageElement).classList.remove("dark:invert", "dark:opacity-90");
           } else {
             (e.target as HTMLImageElement).style.display = 'none';
           }
