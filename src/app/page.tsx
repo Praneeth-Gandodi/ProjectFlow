@@ -88,7 +88,7 @@ export default function Home() {
           progress: p.progress,
           tags: p.tags?.join(', '),
           links: JSON.stringify(p.links),
-          requirements: p.requirements,
+          requirements: Array.isArray(p.requirements) ? p.requirements.join('\\n') : p.requirements,
         })));
         downloadFile(`projectflow-projects-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
         break;
@@ -99,7 +99,14 @@ export default function Home() {
         break;
       }
       case 'csv-courses': {
-        const csvData = Papa.unparse(courses);
+        const csvData = Papa.unparse(courses.map(c => ({
+          id: c.id,
+          name: c.name,
+          completed: c.completed,
+          reason: c.reason,
+          links: JSON.stringify(c.links),
+          notes: JSON.stringify(c.notes),
+        })));
         downloadFile(`projectflow-courses-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
         break;
       }
@@ -121,9 +128,10 @@ export default function Home() {
         const data = JSON.parse(text);
         
         if (data.ideas && data.completed && data.links) {
-          setIdeas(data.ideas);
-          setCompleted(data.completed);
-          setLinks(data.links);
+          setIdeas(data.ideas || []);
+          setCompleted(data.completed || []);
+          setLinks(data.links || []);
+          // Also import courses if they exist in the backup
           if (data.courses) {
             setCourses(data.courses);
           }

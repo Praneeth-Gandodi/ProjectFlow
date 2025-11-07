@@ -6,7 +6,7 @@ import { ProfileMenu } from './profile-menu';
 interface AppHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  onExport: (format: 'json' | 'csv-projects' | 'csv-links') => void;
+  onExport: (format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => void;
   onImport: () => void;
 }
 
