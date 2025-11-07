@@ -4,7 +4,7 @@ import type { Project } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useDrag, useDrop, DragSourceMonitor } from 'react-dnd';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
@@ -32,6 +32,7 @@ interface ProjectCardProps {
   source: 'ideas' | 'completed';
   onUpdateProject: (project: Project) => void;
   onMarkAsCompleted: (project: Project) => void;
+  onMoveToIdeas: (project: Project) => void;
 }
 
 type DragItem = {
@@ -54,7 +55,8 @@ export function ProjectCard({
   moveCard,
   source,
   onUpdateProject,
-  onMarkAsCompleted
+  onMarkAsCompleted,
+  onMoveToIdeas
 }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
@@ -267,6 +269,13 @@ export function ProjectCard({
                   <Edit2 className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </DropdownMenuItem>
+
+                {source === 'completed' && (
+                  <DropdownMenuItem onClick={() => { try { onMoveToIdeas(project); } catch (err) { console.error(err); } }}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <span>Move to Ideas</span>
+                  </DropdownMenuItem>
+                )}
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

@@ -70,6 +70,15 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
     });
   };
 
+  const handleMoveToIdeas = (project: Project) => {
+    setCompleted(prev => prev.filter(p => p.id !== project.id));
+    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress }, ...prev]);
+    toast({
+      title: 'Project Moved',
+      description: `"${project.title}" moved back to Ideas.`,
+    });
+  };
+
   return (
     <div ref={drop} className={`min-h-[300px] transition-colors ${isOver ? 'bg-accent/50' : ''} rounded-lg p-1`}>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -84,6 +93,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
                         source={columnId}
                         onUpdateProject={handleUpdateProject}
                         onMarkAsCompleted={handleMarkAsCompleted}
+                        onMoveToIdeas={handleMoveToIdeas}
                     />
                 ))
             ) : (
