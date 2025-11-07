@@ -18,16 +18,6 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const { toast } = useToast();
 
-  const sortedCourses = useMemo(() => {
-    // This is now just used for display, not for state mutation
-    const allCourses = [...courses];
-    const incomplete = allCourses.filter(c => !c.completed);
-    const completed = allCourses.filter(c => c.completed);
-    // The visual sorting is not strictly needed if drag-and-drop is the primary ordering method
-    // But it's good for initial render
-    return [...incomplete, ...completed];
-  }, [courses]);
-
   const handleAddCourse = () => {
     setEditingCourse(null);
     setIsFormOpen(true);
@@ -49,14 +39,28 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
     }
   };
 
-  const handleToggleComplete = (course: Course) => {
-    const updatedCourse = { ...course, completed: !course.completed };
-    setCourses(prev => prev.map(c => c.id === course.id ? updatedCourse : c));
-    toast({
-      title: updatedCourse.completed ? "Course Completed!" : "Course Marked as Incomplete",
-      description: `"${course.name}" has been updated.`
+  const handleToggleComplete = (courseToToggle: Course) => {
+    const isCompleting = !courseToToggle.completed;
+    const updatedCourse = { ...courseToToggle, completed: isCompleting };
+
+    setCourses(prev => {
+      // Remove the course from its current position
+      const filtered = prev.filter(c => c.id !== courseToToggle.id);
+      
+      if (isCompleting) {
+        // If completing, add it to the end
+        return [...filtered, updatedCourse];
+      } else {
+        // If un-completing, add it to the beginning
+        return [updatedCourse, ...filtered];
+      }
     });
-  }
+
+    toast({
+      title: isCompleting ? "Course Completed!" : "Course Marked as Incomplete",
+      description: `"${courseToToggle.name}" has been updated.`
+    });
+  };
 
   const handleUpdateCourse = (updatedCourse: Course) => {
      setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
