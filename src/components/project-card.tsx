@@ -130,78 +130,81 @@ export function ProjectCard({
         </div>
 
         <Card className="group/card w-full h-full flex flex-col">
-          {/* IMPORTANT: navigate in-app (no target="_blank") — keeps the same session so PIN isn't requested again */}
-          <Link href={`/project/${project.id}`} className="contents">
-            <CardHeader className="pl-10 pr-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                  {isExternal ? (
-                    <img
-                      src={logoSrc}
-                      alt={`${safeTitle} logo`}
-                      width={64}
-                      height={64}
-                      className="w-16 h-16 object-cover"
-                      onError={handleImgError}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Image
-                      src={logoSrc}
-                      alt={`${safeTitle} logo`}
-                      width={64}
-                      height={64}
-                      className="rounded-lg border object-cover"
-                      unoptimized
-                    />
-                  )}
-                </div>
+          <Link href={`/project/${project.id}`} className="block h-full">
+            <div className="flex flex-col h-full">
+              <CardHeader className="pl-10 pr-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                    {isExternal ? (
+                      <img
+                        src={logoSrc}
+                        alt={`${safeTitle} logo`}
+                        width={64}
+                        height={64}
+                        className="w-16 h-16 object-cover"
+                        onError={handleImgError}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Image
+                        src={logoSrc}
+                        alt={`${safeTitle} logo`}
+                        width={64}
+                        height={64}
+                        className="rounded-lg border object-cover"
+                        unoptimized
+                      />
+                    )}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
-                  <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
+              </CardHeader>
+
+              <CardContent className="pl-10 space-y-4 flex-grow">
+                {tags.length > 0 && (
+                  <div>
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+
+              <CardFooter className="pl-10 pr-4 flex flex-col items-start gap-3">
+                {source === 'ideas' && (
+                  <Button
+                    onClick={(e) => {
+                      e.preventDefault(); // prevent navigation
+                      try {
+                        onMarkAsCompleted(project);
+                      } catch (err) {
+                        console.error('Mark as completed failed', err);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    aria-label={`Mark ${safeTitle} as completed`}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark as Completed
+                  </Button>
+                )}
+              </CardFooter>
+            </div>
           </Link>
-
-          <CardContent className="pl-10 space-y-4 flex-grow">
-            {tags.length > 0 && (
-              <div>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-
-          <CardFooter className="pl-10 pr-4 flex flex-col items-start gap-3">
-            {source === 'ideas' && (
-              <Button
-                onClick={() => {
-                  try {
-                    onMarkAsCompleted(project);
-                  } catch (err) {
-                    console.error('Mark as completed failed', err);
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                aria-label={`Mark ${safeTitle} as completed`}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Mark as Completed
-              </Button>
-            )}
-          </CardFooter>
 
           <div className="absolute top-2 right-2 flex items-center gap-2">
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
               <PopoverTrigger asChild>
                 <button
+                  onClick={(e) => e.preventDefault()} // prevent navigation
                   disabled={source === 'completed'}
                   className="text-sm font-bold text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
                   aria-label="Open progress slider"
@@ -230,7 +233,7 @@ export function ProjectCard({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions" onClick={(e) => e.preventDefault()}>
                   <MoreVertical size={16} />
                 </Button>
               </DropdownMenuTrigger>
