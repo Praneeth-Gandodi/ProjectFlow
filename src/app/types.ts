@@ -1,3 +1,4 @@
+
 export interface Note {
   id: string;
   date: string;
@@ -40,4 +41,5 @@ export interface Project {
   repoUrl?: string;
   apiKeys?: any[]; 
   apiKeyPin?: string;
+  dueDate?: string;
 }

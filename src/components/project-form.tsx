@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -18,9 +19,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Project } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Upload, Github } from 'lucide-react';
+import { Plus, Trash2, Upload, Github, CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface ProjectFormProps {
   isOpen: boolean;
@@ -37,6 +42,7 @@ const formSchema = z.object({
   logo: z.string().optional(),
   tags: z.string().optional(),
   repoUrl: z.string().optional(),
+  dueDate: z.date().optional(),
   links: z.array(z.object({
     title: z.string().min(1, 'Link title is required'),
     url: z.string().url('Link URL must be a valid URL'),
@@ -83,6 +89,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         tags: Array.isArray(project.tags) ? project.tags.join(', ') : (project.tags as any) ?? '',
         repoUrl: pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
         links: project.links ?? [],
+        dueDate: project.dueDate ? new Date(project.dueDate) : undefined,
       };
     }
     const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
@@ -94,6 +101,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
       tags: '',
       repoUrl: '',
       links: [],
+      dueDate: undefined,
     };
   };
 
@@ -119,7 +127,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         try {
           const parsed = JSON.parse(savedDraft) as Partial<ProjectFormData>;
           // merge parsed with defaults (parsed may omit fields)
-          initialValues = { ...initialValues, ...parsed };
+          initialValues = { ...initialValues, ...parsed, dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined };
         } catch (e) {
           console.error('Failed to parse project draft', e);
         }
@@ -190,6 +198,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         links: values.links || [],
         tags,
         repoUrl: values.repoUrl || pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
+        dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       };
       setTarget(prev => prev.map(p => (p.id === project.id ? updatedProject : p)));
       toast({ title: 'Project updated!' });
@@ -205,6 +214,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         progress: 0,
         tags,
         repoUrl: values.repoUrl || '',
+        dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       };
       setIdeas(prev => [newProject, ...prev]);
       toast({ title: 'New project added!' });
@@ -369,21 +379,57 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
                       </FormItem>
                     )}
                   />
-                  <div className="pb-2">
-                    <FormField
-                      control={form.control}
-                      name="tags"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tags (comma-separated)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. Web, Mobile, AI" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags (comma-separated)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Web, Mobile, AI" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Due Date (Optional)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-[240px] pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </TabsContent>
 
                 <TabsContent value="links" className="px-2">

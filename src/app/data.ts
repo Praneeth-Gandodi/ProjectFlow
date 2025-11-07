@@ -1,3 +1,4 @@
+
 import type { Project, Link, Course } from './types';
 
 export const INITIAL_IDEAS: Project[] = [
@@ -11,6 +12,7 @@ export const INITIAL_IDEAS: Project[] = [
     progress: 25,
     tags: ['AI', 'Productivity'],
     notes: [],
+    dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
   },
   {
     id: 'idea-2',
@@ -22,6 +24,7 @@ export const INITIAL_IDEAS: Project[] = [
     progress: 50,
     tags: ['Fitness', 'Mobile'],
     notes: [],
+    dueDate: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
   },
   {
     id: 'idea-3',

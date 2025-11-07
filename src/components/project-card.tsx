@@ -1,10 +1,11 @@
+
 'use client';
 
 import type { Project } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle, ArrowLeft } from 'lucide-react';
+import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle, ArrowLeft, CalendarIcon } from 'lucide-react';
 import { useDrag, useDrop, DragSourceMonitor } from 'react-dnd';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
@@ -23,6 +24,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { format, isPast, isWithinInterval, addDays } from 'date-fns';
+
 
 interface ProjectCardProps {
   project: Project;
@@ -148,6 +151,10 @@ export function ProjectCard({
   const tags = Array.isArray(project.tags) ? project.tags.filter(Boolean) : [];
   const safeTitle = typeof project.title === 'string' && project.title.trim() !== '' ? project.title : 'Untitled Project';
   const safeDescription = typeof project.description === 'string' ? project.description : '';
+  
+  const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+  const isOverdue = dueDate && isPast(dueDate) && source === 'ideas';
+  const isSoon = dueDate && isWithinInterval(dueDate, { start: new Date(), end: addDays(new Date(), 7) }) && source === 'ideas';
 
   return (
     <div ref={previewRef as unknown as React.LegacyRef<HTMLDivElement>} style={{ opacity: isDragging ? 0.5 : 1 }}>
@@ -202,7 +209,19 @@ export function ProjectCard({
                   </div>
                 )}
               </CardContent>
-              <CardFooter></CardFooter>
+              <CardFooter>
+                 {dueDate && source === 'ideas' && (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 text-xs font-medium',
+                      isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    <span>{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d')}</span>
+                  </div>
+                )}
+              </CardFooter>
             </div>
           </Link>
 
