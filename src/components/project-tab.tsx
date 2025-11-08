@@ -35,18 +35,18 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
   };
   
   const handleSaveProject = (savedProject: Project) => {
-    // If the project came from editing, it has a source. Otherwise it's new.
-    const source = (editingProject?.source) || 'ideas';
+    const source = editingProject?.source;
 
-    if (editingProject) {
-      // This is an update
+    if (source) {
+      // This is an update to an existing project.
       const setList = source === 'completed' ? setCompleted : setIdeas;
       setList(prev => prev.map(p => p.id === savedProject.id ? savedProject : p));
     } else {
-      // This is a new project, always add to ideas
+      // This is a new project, always add to ideas.
       setIdeas(prev => [savedProject, ...prev]);
     }
   };
+
 
   const moveProject = (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => {
     if (from === to) return;
