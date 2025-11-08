@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'example.com',
       },
+      {
+        protocol: 'https',
+        hostname: '1000logos.net',
+      },
     ],
   },
 };
