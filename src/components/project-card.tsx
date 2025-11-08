@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Project } from '@/app/types';
@@ -63,6 +62,7 @@ export function ProjectCard({
   const ref = useRef<HTMLDivElement | null>(null);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [localProgress, setLocalProgress] = useState<number>(typeof project.progress === 'number' ? project.progress : 0);
+  const [imgError, setImgError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [{ isDragging }, dragRef, previewRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
@@ -103,6 +103,11 @@ export function ProjectCard({
     setLocalProgress(typeof project.progress === 'number' ? project.progress : 0);
   }, [project.progress]);
   
+  // Reset image error state when project logo changes
+  useEffect(() => {
+    setImgError(false);
+  }, [project.logo]);
+
   useEffect(() => {
     if (isEditingProgress) {
       inputRef.current?.focus();
@@ -140,13 +145,8 @@ export function ProjectCard({
   const isDataUrl = typeof rawLogo === 'string' && rawLogo.startsWith('data:image');
   const logoSrc = typeof rawLogo === 'string' && rawLogo.trim() !== '' ? rawLogo.trim() : PLACEHOLDER_DATA_URI;
   
-  const [effectiveLogoSrc, setEffectiveLogoSrc] = useState(logoSrc);
-  useEffect(() => {
-    setEffectiveLogoSrc(logoSrc);
-  }, [logoSrc]);
-
   const handleImgError = () => {
-    setEffectiveLogoSrc(PLACEHOLDER_DATA_URI);
+    setImgError(true);
   };
 
   const tags = Array.isArray(project.tags) ? project.tags.filter(Boolean) : [];
@@ -170,13 +170,13 @@ export function ProjectCard({
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
                   <Image
-                    src={effectiveLogoSrc}
+                    src={imgError ? PLACEHOLDER_DATA_URI : logoSrc}
                     alt={`${safeTitle} logo`}
                     width={64}
                     height={64}
                     className="w-16 h-16 object-cover"
                     onError={handleImgError}
-                    unoptimized={isDataUrl} // CRITICAL FIX for base64 URLs
+                    unoptimized={isDataUrl} // Critical for data URLs
                   />
                 </div>
 
@@ -217,7 +217,6 @@ export function ProjectCard({
               </div>
             )}
           </CardContent>
-
 
           <div className="absolute top-3 right-3 flex items-center gap-2">
             <div className="w-16 text-center">

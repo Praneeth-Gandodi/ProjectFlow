@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
@@ -156,22 +155,42 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
     const file = e.target.files?.[0];
     if (file) {
       // Validation
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
       if (!allowedTypes.includes(file.type)) {
-        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please upload a JPG, PNG, GIF, or WEBP image.' });
+        toast({ 
+          variant: 'destructive', 
+          title: 'Invalid File Type', 
+          description: 'Please upload a JPG, PNG, GIF, WEBP, or SVG image.' 
+        });
         return;
       }
-      const maxSizeInMB = 2;
+      const maxSizeInMB = 5;
       if (file.size > maxSizeInMB * 1024 * 1024) {
-        toast({ variant: 'destructive', title: 'File Too Large', description: `Image must be smaller than ${maxSizeInMB}MB.` });
+        toast({ 
+          variant: 'destructive', 
+          title: 'File Too Large', 
+          description: `Image must be smaller than ${maxSizeInMB}MB.` 
+        });
         return;
       }
 
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
-        setLogoPreview(dataUrl); // THIS IS THE CRITICAL FIX
+        // Update both form state and preview immediately
+        form.setValue('logo', dataUrl, { 
+          shouldDirty: true, 
+          shouldValidate: true 
+        });
+        setLogoPreview(dataUrl);
+        toast({ title: 'Image uploaded successfully!' });
+      };
+      reader.onerror = () => {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Upload Failed', 
+          description: 'Failed to read the image file.' 
+        });
       };
       reader.readAsDataURL(file);
 
@@ -193,7 +212,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
         ...project,
         title: values.title,
         description: values.description || '',
-        logo: values.logo,
+        logo: values.logo || project.logo, // Ensure logo is preserved
         requirements: requirementsFromString(values.requirements),
         links: values.links || [],
         tags,
@@ -307,16 +326,18 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                   />
 
                   <div className="flex items-center gap-4 pt-4 pb-6">
-                    {logoPreview && (
-                      <Image
-                        src={logoPreview}
-                        alt="Logo preview"
-                        width={80}
-                        height={80}
-                        className="rounded-lg border object-cover"
-                        unoptimized
-                      />
-                    )}
+                    <div className="flex-shrink-0">
+                      <div className="relative w-20 h-20 rounded-lg border overflow-hidden bg-muted">
+                        <Image
+                          src={logoPreview || '/placeholder.png'}
+                          alt="Logo preview"
+                          fill
+                          className="object-cover"
+                          unoptimized={logoPreview?.startsWith('data:')}
+                          onError={() => setLogoPreview('/placeholder.png')}
+                        />
+                      </div>
+                    </div>
 
                     <div className="flex-1 space-y-2">
                       <FormLabel>Logo</FormLabel>
@@ -329,7 +350,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                           ref={fileInputRef}
                           type="file"
                           className="hidden"
-                          accept="image/jpeg, image/png, image/gif, image/webp"
+                          accept="image/jpeg, image/png, image/gif, image/webp, image/svg+xml"
                           onChange={handleFileChange}
                         />
 
@@ -339,7 +360,14 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                           render={({ field }) => (
                             <FormItem className='flex-1'>
                               <FormControl>
-                                <Input placeholder="Or paste image URL" {...field} onChange={(e) => { field.onChange(e); setLogoPreview(e.target.value); }} />
+                                <Input 
+                                  placeholder="Or paste image URL" 
+                                  {...field} 
+                                  onChange={(e) => { 
+                                    field.onChange(e); 
+                                    setLogoPreview(e.target.value); 
+                                  }} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
