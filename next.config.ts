@@ -36,6 +36,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '1000logos.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.bing.com',
+      },
     ],
   },
 };
