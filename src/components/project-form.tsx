@@ -137,14 +137,25 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
       if (Object.keys(form.formState.dirtyFields).length > 0) {
         try {
           const draftValue = { ...value };
-          // Do not save large data URLs in the draft to avoid quota errors
+          // Save the logo URL but not data URLs to avoid quota issues
           if (draftValue.logo?.startsWith('data:image')) {
-            delete draftValue.logo;
+            // We'll keep it in the draft but warn if it's too large
+            if (draftValue.logo.length > 100000) { // ~100KB
+              console.warn('Large image data URL detected in draft');
+            }
           }
           localStorage.setItem(draftKey, JSON.stringify(draftValue));
         } catch (e) {
           if (e instanceof DOMException && e.name === 'QuotaExceededError') {
              console.warn('LocalStorage quota exceeded. Could not save draft.');
+             // Remove image data if it's causing quota issues
+             try {
+               const cleanDraft = { ...value };
+               delete cleanDraft.logo;
+               localStorage.setItem(draftKey, JSON.stringify(cleanDraft));
+             } catch {
+               // Give up if still failing
+             }
           } else {
              console.error('Failed to save draft', e);
           }
@@ -207,6 +218,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
   const onSubmit = (values: ProjectFormData) => {
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+    // Use the actual logo from form or generate a placeholder
     const finalLogo = values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`;
 
     const projectData: Project = {
@@ -227,7 +239,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
 
     onSave(projectData);
     
-    toast({ title: project ? 'Project updated!' : 'New project added!' });
+    // Clear the draft after successful save
     localStorage.removeItem(draftKey);
     setIsOpen(false);
   };
@@ -250,7 +262,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
   
   const currentLogo = form.watch('logo');
   const previewSrc = logoPreview || currentLogo;
-
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

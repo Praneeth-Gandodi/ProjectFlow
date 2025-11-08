@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,41 +19,42 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
-        setStoredValue(parseJSON(item) as T);
+        const parsedValue = parseJSON(item) as T;
+        setStoredValue(parsedValue !== undefined ? parsedValue : initialValue);
       }
     } catch (error) {
-      console.warn(`Error reading localStorage key “${key}”:`, error);
+      console.warn(`Error reading localStorage key "${key}":`, error);
+      setStoredValue(initialValue);
     }
     setIsLoaded(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [key, initialValue]);
 
-  const setValue = (value: T | ((prev: T) => T)) => {
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
     if (typeof window === 'undefined') {
-      console.warn(
-        `Tried setting localStorage key “${key}” even though environment is not a client`
-      );
+      console.warn(`Tried setting localStorage key "${key}" even though environment is not a client`);
+      return;
     }
 
     try {
-      const newValue = value instanceof Function ? value(storedValue) : value;
-      window.localStorage.setItem(key, JSON.stringify(newValue));
-      setStoredValue(newValue);
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
       window.dispatchEvent(new Event('local-storage'));
     } catch (error) {
-      console.warn(`Error setting localStorage key “${key}”:`, error);
+      console.warn(`Error setting localStorage key "${key}":`, error);
     }
-  };
+  }, [key, storedValue]);
 
   useEffect(() => {
     const handleStorageChange = () => {
       try {
         const item = window.localStorage.getItem(key);
         if (item) {
-          setStoredValue(parseJSON(item) as T);
+          const parsedValue = parseJSON(item) as T;
+          setStoredValue(parsedValue !== undefined ? parsedValue : initialValue);
         }
       } catch (error) {
-        console.warn(`Error reading localStorage key “${key}”:`, error);
+        console.warn(`Error reading localStorage key "${key}":`, error);
       }
     };
 
@@ -65,9 +65,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('local-storage', handleStorageChange);
     };
-  }, [key]);
+  }, [key, initialValue]);
 
   return [storedValue, setValue, isLoaded];
 }
-
-    

@@ -41,12 +41,24 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
       // This is an update to an existing project.
       const setList = source === 'completed' ? setCompleted : setIdeas;
       setList(prev => prev.map(p => p.id === savedProject.id ? savedProject : p));
+      
+      toast({
+        title: 'Project updated!',
+        description: 'Your project has been updated successfully.',
+      });
     } else {
       // This is a new project, always add to ideas.
       setIdeas(prev => [savedProject, ...prev]);
+      
+      toast({
+        title: 'New project added!',
+        description: 'Your new project has been added to Ideas.',
+      });
     }
+    
+    setIsFormOpen(false);
+    setEditingProject(null);
   };
-
 
   const moveProject = (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => {
     if (from === to) return;
