@@ -171,7 +171,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
-        setLogoPreview(dataUrl);
+        setLogoPreview(dataUrl); // This line fixes the bug
       };
       reader.readAsDataURL(file);
     }
