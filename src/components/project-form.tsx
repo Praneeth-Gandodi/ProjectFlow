@@ -202,7 +202,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
       id: project?.id || `idea-${Date.now()}`,
       title: values.title,
       description: values.description || '',
-      logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
+      logo: values.logo,
       requirements: requirementsFromString(values.requirements),
       links: values.links || [],
       progress: project?.progress ?? 0,
