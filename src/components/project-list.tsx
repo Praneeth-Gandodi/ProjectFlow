@@ -1,6 +1,7 @@
+
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { Project } from '@/app/types';
 import { ProjectCard } from './project-card';
 import { useDrop } from 'react-dnd';
@@ -8,16 +9,17 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ProjectListProps {
   projects: Project[];
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   onEdit: (project: Project, source: 'ideas' | 'completed') => void;
   columnId: 'ideas' | 'completed';
   onDropItem: (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => void;
   setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
   setCompleted: React.Dispatch<React.SetStateAction<Project[]>>;
+  moveCard: (dragId: string, hoverId: string) => void;
 }
 
-export function ProjectList({ projects, setProjects, onEdit, columnId, onDropItem, setIdeas, setCompleted }: ProjectListProps) {
+export function ProjectList({ projects, onEdit, columnId, onDropItem, setIdeas, setCompleted, moveCard }: ProjectListProps) {
     const { toast } = useToast();
+
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'project',
         drop: (item: { id: string, source: 'ideas' | 'completed' }) => {
@@ -25,62 +27,39 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
                 onDropItem(item.id, item.source, columnId);
             }
         },
-        collect: (monitor) => ({
-            isOver: !!monitor.isOver(),
-        }),
+        collect: (monitor) => ({ isOver: !!monitor.isOver() }),
     }));
-
-  const moveCard = (dragId: string, hoverId: string) => {
-    const dragIndex = projects.findIndex(p => p.id === dragId);
-    const hoverIndex = projects.findIndex(p => p.id === hoverId);
-    
-    if (dragIndex === -1 || hoverIndex === -1) return;
-
-    const newProjects = [...projects];
-    const [draggedItem] = newProjects.splice(dragIndex, 1);
-    newProjects.splice(hoverIndex, 0, draggedItem);
-    setProjects(newProjects);
-  };
   
-  const handleDelete = (id: string) => {
-    const projectToDelete = projects.find(p => p.id === id);
-    if (projectToDelete) {
-      setProjects(prev => prev.filter(p => p.id !== id));
-      toast({
-        title: 'Project Deleted',
-        description: `"${projectToDelete.title}" has been removed.`,
-      });
-    }
-  };
+  const handleDelete = useCallback((id: string) => {
+    const setList = columnId === 'ideas' ? setIdeas : setCompleted;
+    setList(prev => {
+        const projectToDelete = prev.find(p => p.id === id);
+        if (projectToDelete) {
+            toast({ title: 'Project Deleted', description: `"${projectToDelete.title}" has been removed.` });
+        }
+        return prev.filter(p => p.id !== id);
+    });
+  }, [columnId, setIdeas, setCompleted, toast]);
 
-  const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? { ...updatedProject } : p)); // FIX: Create new object
-     toast({
-        title: 'Progress Updated',
-        description: `"${updatedProject.title}" progress saved.`,
-      });
-  }
+  const handleUpdateProject = useCallback((updatedProject: Project) => {
+    const setList = columnId === 'ideas' ? setIdeas : setCompleted;
+    setList(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  }, [columnId, setIdeas, setCompleted]);
 
-  const handleMarkAsCompleted = (project: Project) => {
+  const handleMarkAsCompleted = useCallback((project: Project) => {
     setIdeas(prev => prev.filter(p => p.id !== project.id));
-    setCompleted(prev => [{ ...project, progress: 100 }, ...prev]); // FIX: Create new object
-    toast({
-        title: 'Project Completed!',
-        description: `"${project.title}" has been moved to Completed.`,
-    });
-  };
+    setCompleted(prev => [{ ...project, progress: 100 }, ...prev]);
+    toast({ title: 'Project Completed!', description: `"${project.title}" moved to Completed.` });
+  }, [setIdeas, setCompleted, toast]);
 
-  const handleMoveToIdeas = (project: Project) => {
+  const handleMoveToIdeas = useCallback((project: Project) => {
     setCompleted(prev => prev.filter(p => p.id !== project.id));
-    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress || 0 }, ...prev]); // FIX: Create new object
-    toast({
-      title: 'Project Moved',
-      description: `"${project.title}" moved back to Ideas.`,
-    });
-  };
+    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : (project.progress ?? 0) }, ...prev]);
+    toast({ title: 'Project Moved', description: `"${project.title}" moved back to Ideas.` });
+  }, [setIdeas, setCompleted, toast]);
 
   return (
-    <div ref={drop} className={`min-h-[300px] transition-colors ${isOver ? 'bg-accent/50' : ''} rounded-lg p-1`}>
+    <div ref={drop} className={`min-h-[300px] transition-colors rounded-lg p-1 ${isOver ? 'bg-accent/50' : ''}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {projects.length > 0 ? (
           projects.map((project) => (

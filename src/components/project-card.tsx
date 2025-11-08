@@ -1,4 +1,4 @@
-// src/components/project-card.tsx  (replace existing file)
+// src/components/project-card.tsx
 'use client';
 
 import type { Project } from '@/app/types';
@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
-import { getLogoUrl } from '@/lib/logo-storage';
+import { useLogoUrl } from '@/lib/useLogoUrl';
 
 interface ProjectCardProps {
   project: Project;
@@ -43,13 +43,7 @@ type DragItem = {
   source: 'ideas' | 'completed';
 };
 
-const PLACEHOLDER_SVG = encodeURIComponent(`
-  <svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'>
-    <rect width='100%' height='100%' fill='%23f3f4f6'/>
-    <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23888'>No Image</text>
-  </svg>
-`);
-const PLACEHOLDER_DATA_URI = `data:image/svg+xml;utf8,${PLACEHOLDER_SVG}`;
+const PLACEHOLDER_DATA_URI = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM4ODgiPk5vIExvZ288L3RleHQ+PC9zdmc+`;
 
 export function ProjectCard({
   project,
@@ -63,90 +57,38 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
-  const [localProgress, setLocalProgress] = useState<number>(typeof project.progress === 'number' ? project.progress : 0);
-  const [imgError, setImgError] = useState(false);
-  const [indexedBlobUrl, setIndexedBlobUrl] = useState<string | null>(null);
+  const [localProgress, setLocalProgress] = useState<number>(project.progress ?? 0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { url: logoUrl } = useLogoUrl(project.logo);
 
   const [{ isDragging }, dragRef, previewRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
     type: 'project',
-    item: { id: project?.id ?? '', source },
+    item: { id: project.id, source },
     collect: (monitor: DragSourceMonitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  }), [project?.id, source]);
+  }), [project.id, source]);
 
   const [, dropRef] = useDrop<DragItem, void, unknown>(() => ({
     accept: 'project',
     hover: (item) => {
-      try {
-        if (!item || !item.id || !project?.id) return;
-        if (item.id !== project.id && item.source === source) {
-          moveCard(item.id, project.id);
-        }
-      } catch (err) {
-        // swallow drag errors
+      if (!item || !item.id || !project.id) return;
+      if (item.id !== project.id && item.source === source) {
+        moveCard(item.id, project.id);
       }
     },
-  }), [project?.id, source, moveCard]);
+  }), [project.id, source, moveCard]);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    try {
-      if (typeof dropRef === 'function') dropRef(node);
-      if (typeof dragRef === 'function') dragRef(node);
-      if (previewRef && typeof previewRef === 'function') previewRef(node);
-    } catch {
-      // ignore attach errors
-    }
-  }, [ref, dragRef, dropRef, previewRef]);
+    dragRef(dropRef(node));
+  }, [ref, dragRef, dropRef]);
 
-  // Sync progress
   useEffect(() => {
-    setLocalProgress(typeof project.progress === 'number' ? project.progress : 0);
+    setLocalProgress(project.progress ?? 0);
   }, [project.progress]);
-
-  // Reset img error when logo changes
-  useEffect(() => {
-    setImgError(false);
-  }, [project.logo]);
-
-  // If logo references an indexeddb id, fetch blob URL
-  useEffect(() => {
-    let active = true;
-    let createdUrl: string | null = null;
-
-    const rawLogo = (project && (project as any).logo) ?? '';
-    if (typeof rawLogo === 'string' && rawLogo.startsWith('indexeddb:')) {
-      const id = rawLogo.replace('indexeddb:', '');
-      getLogoUrl(id).then(url => {
-        if (!active) {
-          if (url) URL.revokeObjectURL(url);
-          return;
-        }
-        if (url) {
-          createdUrl = url;
-          setIndexedBlobUrl(url);
-        } else {
-          setIndexedBlobUrl(null);
-        }
-      }).catch((err) => {
-        console.error('Error fetching indexeddb logo', err);
-        setIndexedBlobUrl(null);
-      });
-    } else {
-      // if not an indexeddb ref, ensure we don't keep a stale blob URL
-      setIndexedBlobUrl(null);
-    }
-
-    return () => {
-      active = false;
-      if (createdUrl) {
-        try { URL.revokeObjectURL(createdUrl); } catch {}
-      }
-    };
-  }, [project.logo]);
 
   useEffect(() => {
     if (isEditingProgress) {
@@ -164,11 +106,7 @@ export function ProjectCard({
     setIsEditingProgress(false);
 
     if (project.progress !== newProgress) {
-      try {
-        onUpdateProject({ ...project, progress: newProgress });
-      } catch (err) {
-        console.error('Failed to update project progress', err);
-      }
+      onUpdateProject({ ...project, progress: newProgress });
     }
   };
 
@@ -176,69 +114,41 @@ export function ProjectCard({
     if (e.key === 'Enter') {
       handleProgressCommit();
     } else if (e.key === 'Escape') {
-      setLocalProgress(project.progress || 0);
+      setLocalProgress(project.progress ?? 0);
       setIsEditingProgress(false);
     }
   };
 
- const rawLogo = (project && (project as any).logo) ?? '';
-  const isDataUrl = typeof rawLogo === 'string' && rawLogo.startsWith('data:image');
-
-  // If we have the blob URL from IndexedDB use it.
-  // If the project.logo is an indexeddb:... id but blob URL hasn't arrived yet,
-  // show the placeholder until fetch finishes. This prevents the browser trying to load
-  // "indexeddb:..." directly (which caused ERR_UNKNOWN_URL_SCHEME).
-  let logoSrc: string;
-  if (indexedBlobUrl) {
-    logoSrc = indexedBlobUrl;
-  } else if (typeof rawLogo === 'string' && rawLogo.startsWith('indexeddb:')) {
-    // still loading from indexedDB — show placeholder instead of the raw scheme
-    logoSrc = PLACEHOLDER_DATA_URI;
-  } else if (typeof rawLogo === 'string' && rawLogo.trim() !== '') {
-    logoSrc = rawLogo.trim();
-  } else {
-    logoSrc = PLACEHOLDER_DATA_URI;
-  }
-
-  const handleImgError = () => {
-    setImgError(true);
-  };
-
-  const tags = Array.isArray(project.tags) ? project.tags.filter(Boolean) : [];
-  const safeTitle = typeof project.title === 'string' && project.title.trim() !== '' ? project.title : 'Untitled Project';
-  const safeDescription = typeof project.description === 'string' ? project.description : '';
+  const safeTitle = project.title || 'Untitled Project';
+  const tags = project.tags || [];
 
   const dueDate = project.dueDate ? new Date(project.dueDate) : null;
   const isOverdue = dueDate && isPast(dueDate) && source === 'ideas';
   const isSoon = dueDate && isWithinInterval(dueDate, { start: new Date(), end: addDays(new Date(), 7) }) && source === 'ideas';
 
   return (
-    <div
-      ref={previewRef as unknown as React.LegacyRef<HTMLDivElement>}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
-      className="w-full"
-    >
+    <div ref={previewRef} style={{ opacity: isDragging ? 0.5 : 1 }} className="w-full">
       <div ref={ref} className="relative transition-all hover:shadow-lg rounded-lg h-full group/card cursor-grab">
         <Card className="w-full h-full flex flex-col p-5">
           <Link href={`/project/${project.id}`} className="contents">
             <CardHeader className="p-0 pb-4">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
-                  {/* using img for blob: and data:, avoids next/image restrictions */}
-                  <img
-                    src={imgError ? PLACEHOLDER_DATA_URI : logoSrc}
+                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border relative">
+                  <Image
+                    src={logoUrl || PLACEHOLDER_DATA_URI}
                     alt={`${safeTitle} logo`}
-                    className="w-16 h-16 object-cover"
-                    onError={handleImgError as any}
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                    unoptimized={logoUrl?.startsWith('data:') || logoUrl?.startsWith('blob:')}
                   />
                 </div>
-
                 <div className="flex-1 min-w-0 space-y-1">
                   <CardTitle className="font-headline text-lg leading-tight group-hover:underline truncate">
                     {safeTitle}
                   </CardTitle>
                   <CardDescription className="text-sm line-clamp-2 leading-relaxed">
-                    {safeDescription}
+                    {project.description}
                   </CardDescription>
                 </div>
               </div>
@@ -255,18 +165,10 @@ export function ProjectCard({
                 ))}
               </div>
             )}
-
             {dueDate && source === 'ideas' && (
-              <div
-                className={cn(
-                  'flex items-center gap-1.5 text-xs font-medium',
-                  isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
-                )}
-              >
+              <div className={cn('flex items-center gap-1.5 text-xs font-medium', isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground')}>
                 <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate">
-                  {isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d, yyyy')}
-                </span>
+                <span className="truncate">{isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d, yyyy')}</span>
               </div>
             )}
           </CardContent>
@@ -285,17 +187,9 @@ export function ProjectCard({
                 />
               ) : (
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (source === 'ideas') setIsEditingProgress(true);
-                  }}
+                  onClick={(e) => { e.preventDefault(); if (source === 'ideas') setIsEditingProgress(true); }}
                   disabled={source === 'completed'}
-                  className={cn(
-                    "text-sm font-medium px-2 py-1 rounded-md transition-colors",
-                    source === 'ideas'
-                      ? "text-primary cursor-pointer hover:bg-accent"
-                      : "text-muted-foreground cursor-not-allowed"
-                  )}
+                  className={cn("text-sm font-medium px-2 py-1 rounded-md transition-colors", source === 'ideas' ? "text-primary cursor-pointer hover:bg-accent" : "text-muted-foreground cursor-not-allowed")}
                   aria-label="Edit progress"
                 >
                   {source === 'completed' ? '100%' : `${Math.round(localProgress ?? 0)}%`}
@@ -304,59 +198,25 @@ export function ProjectCard({
             </div>
 
             {source === 'ideas' && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkAsCompleted(project);
-                }}
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50"
-                aria-label={`Mark ${safeTitle} as completed`}
-              >
+              <Button onClick={() => onMarkAsCompleted(project)} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50" aria-label={`Mark ${safeTitle} as completed`}>
                 <CheckCircle className="h-5 w-5" />
               </Button>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
-                  <MoreVertical size={16} />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions"><MoreVertical size={16} /></Button>
               </DropdownMenuTrigger>
-
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => { try { onEdit(); } catch (err) { console.error(err); } }}>
-                  <Edit2 className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
-                </DropdownMenuItem>
-
-                {source === 'completed' && (
-                  <DropdownMenuItem onClick={() => onMoveToIdeas(project)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    <span>Move to Ideas</span>
-                  </DropdownMenuItem>
-                )}
-
+                <DropdownMenuItem onClick={onEdit}><Edit2 className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                {source === 'completed' && (<DropdownMenuItem onClick={() => onMoveToIdeas(project)}><ArrowLeft className="mr-2 h-4 w-4" /><span>Move to Ideas</span></DropdownMenuItem>)}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span className="text-destructive">Delete</span>
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                   </AlertDialogTrigger>
-
                   <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete this project.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogAction onClick={() => { try { onDelete(); } catch (err) { console.error('Delete handler error', err); } }} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    </AlertDialogFooter>
+                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete this project.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               </DropdownMenuContent>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
@@ -40,6 +41,7 @@ import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { INITIAL_IDEAS, INITIAL_COMPLETED } from '@/app/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLogoUrl } from '@/lib/useLogoUrl';
 
 interface APIKey {
   id: string;
@@ -61,6 +63,8 @@ export default function ProjectDetailsPage() {
   const [completed, setCompleted, isCompletedLoaded] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
 
   const [project, setProject] = useState<Project | null>(null);
+  const { url: logoDisplayUrl } = useLogoUrl(project?.logo);
+
 
   // Editing fields
   const [editDescription, setEditDescription] = useState('');
@@ -705,10 +709,8 @@ export default function ProjectDetailsPage() {
       </div>
     );
   }
-
-  const logoSrc = (project as any).logo || `https://picsum.photos/seed/${project.id}/800/800`;
-  const progress = (project as any).progress ?? 0;
   
+  const progress = project.progress ?? 0;
   const dueDate = project.dueDate ? new Date(project.dueDate) : null;
   const isCompleted = completed.some(p => p.id === project.id);
   const isOverdue = dueDate && isPast(dueDate) && !isCompleted;
@@ -788,16 +790,16 @@ export default function ProjectDetailsPage() {
                     <div className="relative">
                       <div
                         onContextMenu={handleProjectIconContextMenu}
-                        className="cursor-context-menu"
+                        className="cursor-context-menu w-48 h-48"
                       >
-                        <Image
-                          src={logoSrc}
+                       <Image
+                          src={logoDisplayUrl || `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM4ODgiPlByb2plY3Q8L3RleHQ+PC9zdmc+`}
                           alt={`${project.title} logo`}
                           width={280}
                           height={280}
                           className="rounded-xl border-2 border-border object-cover w-48 h-48"
                           priority
-                          unoptimized
+                          unoptimized={logoDisplayUrl?.startsWith('blob:') || logoDisplayUrl?.startsWith('data:')}
                         />
                       </div>
                     </div>

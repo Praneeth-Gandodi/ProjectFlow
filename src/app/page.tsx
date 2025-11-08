@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useContext, useRef } from 'react';
+import React, { useState, useMemo, useContext, useRef, useCallback } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,27 +31,7 @@ export default function Home() {
 
   const isClient = isIdeasLoaded && isCompletedLoaded && isLinksLoaded && isCoursesLoaded;
 
-  const filteredIdeas = useMemo(() =>
-    (ideas || []).filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(searchTerm.toLowerCase())),
-    [ideas, searchTerm]
-  );
-
-  const filteredCompleted = useMemo(() =>
-    (completed || []).filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(searchTerm.toLowerCase())),
-    [completed, searchTerm]
-  );
-
-  const filteredLinks = useMemo(() =>
-    (links || []).filter(l => l.title.toLowerCase().includes(searchTerm.toLowerCase()) || (l.description && l.description.toLowerCase().includes(searchTerm.toLowerCase()))),
-    [links, searchTerm]
-  );
-
-  const filteredCourses = useMemo(() =>
-    (courses || []).filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    [courses, searchTerm]
-  );
-
-  const downloadFile = (filename: string, content: string, mimeType: string) => {
+  const downloadFile = useCallback((filename: string, content: string, mimeType: string) => {
     const element = document.createElement('a');
     const file = new Blob([content], { type: mimeType });
     element.href = URL.createObjectURL(file);
@@ -59,19 +39,13 @@ export default function Home() {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-  };
+  }, []);
 
-  const handleExport = (format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => {
+  const handleExport = useCallback((format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     switch (format) {
       case 'json': {
-        const allData = {
-          ideas,
-          completed,
-          links,
-          courses,
-          exportedAt: new Date().toISOString(),
-        };
+        const allData = { ideas, completed, links, courses, exportedAt: new Date().toISOString() };
         downloadFile(`projectflow-backup-${timestamp}.json`, JSON.stringify(allData, null, 2), 'application/json');
         break;
       }
@@ -81,15 +55,9 @@ export default function Home() {
           ...completed.map(p => ({ ...p, status: 'completed' })),
         ];
         const csvData = Papa.unparse(allProjects.map(p => ({
-          id: p.id,
-          title: p.title,
-          description: p.description,
-          status: p.status,
-          progress: p.progress,
-          tags: p.tags?.join(', '),
-          dueDate: p.dueDate,
-          repoUrl: p.repoUrl,
-          links: JSON.stringify(p.links),
+          id: p.id, title: p.title, description: p.description, status: p.status,
+          progress: p.progress, tags: p.tags?.join(', '), dueDate: p.dueDate,
+          repoUrl: p.repoUrl, links: JSON.stringify(p.links),
           requirements: Array.isArray(p.requirements) ? p.requirements.join('\\n') : p.requirements,
         })));
         downloadFile(`projectflow-projects-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
@@ -102,18 +70,14 @@ export default function Home() {
       }
       case 'csv-courses': {
         const csvData = Papa.unparse(courses.map(c => ({
-          id: c.id,
-          name: c.name,
-          completed: c.completed,
-          reason: c.reason,
-          links: JSON.stringify(c.links),
-          notes: JSON.stringify(c.notes),
+          id: c.id, name: c.name, completed: c.completed, reason: c.reason,
+          links: JSON.stringify(c.links), notes: JSON.stringify(c.notes),
         })));
         downloadFile(`projectflow-courses-${timestamp}.csv`, csvData, 'text/csv;charset=utf-8;');
         break;
       }
     }
-  };
+  }, [ideas, completed, links, courses, downloadFile]);
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -130,24 +94,17 @@ export default function Home() {
         const data = JSON.parse(text);
         
         if (data.ideas || data.completed || data.links || data.courses) {
-          setIdeas(data.ideas || []);
-          setCompleted(data.completed || []);
-          setLinks(data.links || []);
-          setCourses(data.courses || []);
-          toast({
-            title: 'Import Successful',
-            description: 'Your data has been restored from the backup.',
-          });
+          setIdeas(data.ideas || INITIAL_IDEAS);
+          setCompleted(data.completed || INITIAL_COMPLETED);
+          setLinks(data.links || INITIAL_LINKS);
+          setCourses(data.courses || INITIAL_COURSES);
+          toast({ title: 'Import Successful', description: 'Your data has been restored.' });
         } else {
           throw new Error('Invalid backup file format.');
         }
       } catch (error) {
         console.error('Import failed:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Import Failed',
-          description: 'The selected file is not a valid backup file.',
-        });
+        toast({ variant: 'destructive', title: 'Import Failed', description: 'The selected file is not a valid backup file.' });
       }
     };
     reader.readAsText(file);
@@ -162,20 +119,14 @@ export default function Home() {
     <DndProvider backend={HTML5Backend}>
       <div className={cn("flex flex-col min-h-screen", font === 'serif' ? 'font-serif' : 'font-sans')}>
         <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} onImport={handleImportClick} />
-        <input
-          type="file"
-          ref={importInputRef}
-          className="hidden"
-          accept="application/json"
-          onChange={handleImport}
-        />
+        <input type="file" ref={importInputRef} className="hidden" accept="application/json" onChange={handleImport} />
 
         <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-screen-2xl' : 'max-w-7xl' )}>
           <DashboardStats 
-            ideasCount={(ideas || []).length} 
-            completedCount={(completed || []).length}
-            coursesCount={(courses || []).length}
-            completedCoursesCount={(courses || []).filter(c => c.completed).length}
+            ideasCount={ideas.length} 
+            completedCount={completed.length}
+            coursesCount={courses.length}
+            completedCoursesCount={courses.filter(c => c.completed).length}
           />
 
           <Tabs defaultValue="ideas" className="mt-8">
@@ -187,33 +138,29 @@ export default function Home() {
             </TabsList>
             <TabsContent value="ideas">
                <ProjectTab 
-                 projects={filteredIdeas} 
-                 setProjects={setIdeas}
+                 ideas={ideas}
                  setIdeas={setIdeas}
+                 completed={completed}
                  setCompleted={setCompleted}
-                 allIdeas={ideas}
-                 allCompleted={completed}
                  isCompletedTab={false}
-                 title="Ideas"
+                 searchTerm={searchTerm}
                />
             </TabsContent>
             <TabsContent value="completed">
                 <ProjectTab 
-                 projects={filteredCompleted} 
-                 setProjects={setCompleted}
+                 ideas={ideas}
                  setIdeas={setIdeas}
+                 completed={completed}
                  setCompleted={setCompleted}
-                 allIdeas={ideas}
-                 allCompleted={completed}
                  isCompletedTab={true}
-                 title="Completed"
+                 searchTerm={searchTerm}
                />
             </TabsContent>
             <TabsContent value="links">
-              <LinkTab links={filteredLinks} setLinks={setLinks} />
+              <LinkTab links={links} setLinks={setLinks} searchTerm={searchTerm} />
             </TabsContent>
             <TabsContent value="learning">
-              <LearningTab courses={filteredCourses} setCourses={setCourses} />
+              <LearningTab courses={courses} setCourses={setCourses} searchTerm={searchTerm} />
             </TabsContent>
           </Tabs>
         </main>

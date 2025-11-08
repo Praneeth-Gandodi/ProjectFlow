@@ -1,3 +1,4 @@
+
 // src/lib/useLogoUrl.ts
 import { useEffect, useState, useRef } from 'react';
 import { getLogoUrl } from './logo-storage';
@@ -12,7 +13,6 @@ export function useLogoUrl(logo?: string | null): Result {
   useEffect(() => {
     let mounted = true;
 
-    // cleanup previously created object URL if any
     const revokeCurrent = () => {
       if (currentObjectUrlRef.current && currentObjectUrlRef.current.startsWith('blob:')) {
         try { URL.revokeObjectURL(currentObjectUrlRef.current); } catch {}
@@ -20,38 +20,34 @@ export function useLogoUrl(logo?: string | null): Result {
       currentObjectUrlRef.current = null;
     };
 
-    revokeCurrent(); // revoke any old when logo changes
+    revokeCurrent();
     setUrl(null);
+    setLoading(false);
 
     if (!logo) {
-      setLoading(false);
       return () => { mounted = false; revokeCurrent(); };
     }
 
-    // if looks like an IndexedDB id we created (logo-...), fetch blob URL
-    if (/^logo-/.test(logo)) {
+    if (logo.startsWith('indexeddb:')) {
       setLoading(true);
-      getLogoUrl(logo)
+      const id = logo.replace('indexeddb:', '');
+      getLogoUrl(id)
         .then(u => {
-          if (!mounted) return;
-          if (u) {
-            currentObjectUrlRef.current = u;
-            setUrl(u);
-          } else {
-            setUrl(null);
+          if (!mounted) {
+            if (u) URL.revokeObjectURL(u);
+            return;
           }
+          currentObjectUrlRef.current = u;
+          setUrl(u);
         })
         .catch((err) => {
           console.error('useLogoUrl getLogoUrl error', err);
           if (mounted) setUrl(null);
         })
         .finally(() => { if (mounted) setLoading(false); });
-      return () => { mounted = false; revokeCurrent(); };
+    } else {
+      setUrl(logo);
     }
-
-    // If it's an inline data URL or remote URL, use directly
-    setUrl(logo);
-    setLoading(false);
 
     return () => { mounted = false; revokeCurrent(); };
   }, [logo]);

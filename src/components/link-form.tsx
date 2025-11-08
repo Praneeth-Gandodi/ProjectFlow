@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,157 +35,72 @@ const formSchema = z.object({
 
 type LinkFormData = z.infer<typeof formSchema>;
 
-const getDraftKey = (linkId: string | null) => `link_draft_${linkId || 'new'}`;
-
 export function LinkForm({ isOpen, setIsOpen, link, setLinks }: LinkFormProps) {
   const { toast } = useToast();
-  const draftKey = getDraftKey(link?.id ?? null);
   
   const form = useForm<LinkFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: link ? {
-        title: link.title,
-        url: link.url,
-        description: link.description || '',
-      } : {
-        title: '',
-        url: '',
-        description: '',
-      }
+    defaultValues: { title: '', url: '', description: '' }
   });
 
   useEffect(() => {
     if (isOpen) {
-      let values: LinkFormData | null = null;
-      if (typeof window !== 'undefined') {
-        const savedDraft = localStorage.getItem(draftKey);
-        if (savedDraft) {
-          try {
-            values = JSON.parse(savedDraft);
-          } catch(e) {
-            console.error("Failed to parse link draft", e);
-          }
-        }
-      }
-      
-      if (values) {
-        form.reset(values);
-      } else if (link) {
+      if (link) {
         form.reset({
           title: link.title,
           url: link.url,
           description: link.description || '',
         });
       } else {
-        form.reset({
-          title: '',
-          url: '',
-          description: '',
-        });
+        form.reset({ title: '', url: '', description: '' });
       }
     }
-  }, [link, isOpen, form, draftKey]);
-
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const subscription = form.watch((value) => {
-       if (Object.values(form.formState.dirtyFields).some(Boolean)) {
-         localStorage.setItem(draftKey, JSON.stringify(value));
-       }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, draftKey, isOpen]);
+  }, [link, isOpen, form]);
 
   const onSubmit = (values: LinkFormData) => {
     if (link) {
-      // Editing existing link
       setLinks(prev => prev.map(l => (l.id === link.id ? { ...l, ...values } : l)));
       toast({ title: 'Link updated!' });
     } else {
-      // Adding new link
-      const newLink: Link = {
-        id: `link-${Date.now()}`,
-        ...values,
-      };
+      const newLink: Link = { id: `link-${Date.now()}`, ...values };
       setLinks(prev => [newLink, ...prev]);
       toast({ title: 'New link added!' });
     }
-    localStorage.removeItem(draftKey);
     setIsOpen(false);
   };
-  
-  const handleClose = (open: boolean) => {
-    if (!open) {
-      const formValues = form.getValues();
-      const hasValues = formValues.title || formValues.url || formValues.description;
-      const isDefault = link ? (formValues.title === link.title && formValues.url === link.url && (formValues.description || '') === (link.description || '')) : !hasValues;
-
-      if (!isDefault) {
-        const confirmation = confirm("You have unsaved changes. Are you sure you want to close? Your draft will be available when you re-open the form.");
-        if (confirmation) {
-            setIsOpen(false);
-        }
-      } else {
-         setIsOpen(false);
-         localStorage.removeItem(draftKey);
-      }
-    } else {
-      setIsOpen(true);
-    }
-  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="font-headline">{link ? 'Edit Link' : 'Add New Link'}</DialogTitle>
-          <DialogDescription>
-            {link ? 'Make changes to your saved link.' : 'Add a new useful link to your collection.'} Your progress is saved automatically.
-          </DialogDescription>
+          <DialogDescription>{link ? 'Make changes to your saved link.' : 'Add a new useful link to your collection.'}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., shadcn/ui" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://ui.shadcn.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="A library of UI components..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="title" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl><Input placeholder="e.g., shadcn/ui" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="url" render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL</FormLabel>
+                <FormControl><Input placeholder="https://ui.shadcn.com" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description (Optional)</FormLabel>
+                <FormControl><Textarea placeholder="A library of UI components..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
               <Button type="submit">Save Link</Button>
             </DialogFooter>
           </form>

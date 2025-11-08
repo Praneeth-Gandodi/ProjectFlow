@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import type { Course } from '@/app/types';
 import { Button } from './ui/button';
 import { Plus } from 'lucide-react';
@@ -11,9 +12,10 @@ import { CourseForm } from './course-form';
 interface LearningTabProps {
   courses: Course[];
   setCourses: React.Dispatch<React.SetStateAction<Course[]>>;
+  searchTerm: string;
 }
 
-export function LearningTab({ courses, setCourses }: LearningTabProps) {
+export function LearningTab({ courses, setCourses, searchTerm }: LearningTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const { toast } = useToast();
@@ -28,55 +30,55 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
     setIsFormOpen(true);
   };
   
-  const handleDeleteCourse = (id: string) => {
-    const courseToDelete = courses.find(c => c.id === id);
-    if (courseToDelete) {
-      setCourses(prev => prev.filter(c => c.id !== id));
-      toast({
-        title: "Course Deleted",
-        description: `"${courseToDelete.name}" has been removed.`
-      });
-    }
-  };
+  const handleDeleteCourse = useCallback((id: string) => {
+    setCourses(prev => {
+        const courseToDelete = prev.find(c => c.id === id);
+        if (courseToDelete) {
+            toast({ title: "Course Deleted", description: `"${courseToDelete.name}" has been removed.` });
+        }
+        return prev.filter(c => c.id !== id);
+    });
+  }, [setCourses, toast]);
 
-  const handleToggleComplete = (courseToToggle: Course) => {
+  const handleToggleComplete = useCallback((courseToToggle: Course) => {
     const isCompleting = !courseToToggle.completed;
     const updatedCourse = { ...courseToToggle, completed: isCompleting };
 
     setCourses(prev => {
-      // Remove the course from its current position
       const filtered = prev.filter(c => c.id !== courseToToggle.id);
-      
-      if (isCompleting) {
-        // If completing, add it to the end
-        return [...filtered, updatedCourse];
-      } else {
-        // If un-completing, add it to the beginning
-        return [updatedCourse, ...filtered];
-      }
+      return isCompleting ? [...filtered, updatedCourse] : [updatedCourse, ...filtered];
     });
 
     toast({
       title: isCompleting ? "Course Completed!" : "Course Marked as Incomplete",
       description: `"${courseToToggle.name}" has been updated.`
     });
-  };
+  }, [setCourses, toast]);
 
-  const handleUpdateCourse = (updatedCourse: Course) => {
+  const handleUpdateCourse = useCallback((updatedCourse: Course) => {
      setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
-  }
+  }, [setCourses]);
   
-  const moveCard = (dragId: string, hoverId: string) => {
-    const dragIndex = courses.findIndex(c => c.id === dragId);
-    const hoverIndex = courses.findIndex(c => c.id === hoverId);
-    
-    if (dragIndex === -1 || hoverIndex === -1) return;
+  const moveCard = useCallback((dragId: string, hoverId: string) => {
+    setCourses(prevCourses => {
+        const dragIndex = prevCourses.findIndex(c => c.id === dragId);
+        const hoverIndex = prevCourses.findIndex(c => c.id === hoverId);
+        if (dragIndex === -1 || hoverIndex === -1) return prevCourses;
 
-    const newCourses = [...courses];
-    const [draggedItem] = newCourses.splice(dragIndex, 1);
-    newCourses.splice(hoverIndex, 0, draggedItem);
-    setCourses(newCourses);
-  };
+        const newCourses = [...prevCourses];
+        const [draggedItem] = newCourses.splice(dragIndex, 1);
+        newCourses.splice(hoverIndex, 0, draggedItem);
+        return newCourses;
+    });
+  }, [setCourses]);
+
+  const filteredCourses = useMemo(() => {
+    if (!searchTerm) return courses;
+    return courses.filter(c =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.reason || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [courses, searchTerm]);
 
   return (
     <div className="mt-6">
@@ -86,7 +88,7 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {courses.map(course => (
+        {filteredCourses.map(course => (
           <CourseCard
             key={course.id}
             course={course}
@@ -96,9 +98,9 @@ export function LearningTab({ courses, setCourses }: LearningTabProps) {
             moveCard={moveCard}
           />
         ))}
-        {courses.length === 0 && (
+        {filteredCourses.length === 0 && (
           <div className="col-span-full text-center text-muted-foreground py-10">
-            No courses saved yet.
+            {searchTerm ? 'No courses match your search.' : 'No courses saved yet.'}
           </div>
         )}
       </div>

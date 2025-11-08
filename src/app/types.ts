@@ -16,9 +16,9 @@ export interface Course {
   id: string;
   name: string;
   completed: boolean;
-  links?: Link[];
+  links: Link[];
   logo?: string;
-  notes?: Note[];
+  notes: Note[];
   reason?: string;
 }
 
@@ -34,8 +34,8 @@ export interface Project {
   description?: string;
   requirements?: string | string[];
   logo?: string;
-  links?: Link[];
-  notes?: Note[];
+  links: Link[];
+  notes: Note[];
   progress?: number;
   tags?: string[];
   repoUrl?: string;
