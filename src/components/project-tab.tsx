@@ -34,31 +34,49 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     setIsFormOpen(true);
   };
   
-  const handleSaveProject = (savedProject: Project) => {
-    const source = editingProject?.source;
+  
+// In the handleSaveProject function, add logging:
 
-    if (source) {
-      // This is an update to an existing project.
-      const setList = source === 'completed' ? setCompleted : setIdeas;
-      setList(prev => prev.map(p => p.id === savedProject.id ? savedProject : p));
-      
-      toast({
-        title: 'Project updated!',
-        description: 'Your project has been updated successfully.',
-      });
-    } else {
-      // This is a new project, always add to ideas.
-      setIdeas(prev => [savedProject, ...prev]);
-      
-      toast({
-        title: 'New project added!',
-        description: 'Your new project has been added to Ideas.',
-      });
-    }
+const handleSaveProject = (savedProject: Project) => {
+  const source = editingProject?.source;
+
+  console.log('handleSaveProject called with:', {
+    projectId: savedProject.id,
+    hasLogo: !!savedProject.logo,
+    logoLength: savedProject.logo?.length,
+    source
+  });
+
+  if (source) {
+    // This is an update to an existing project.
+    const setList = source === 'completed' ? setCompleted : setIdeas;
+    setList(prev => {
+      const newList = prev.map(p => p.id === savedProject.id ? { ...savedProject } : p);
+      console.log('Updated list:', newList);
+      return newList;
+    });
     
-    setIsFormOpen(false);
-    setEditingProject(null);
-  };
+    toast({
+      title: 'Project updated!',
+      description: 'Your project has been updated successfully.',
+    });
+  } else {
+    // This is a new project, always add to ideas.
+    setIdeas(prev => {
+      const newList = [{ ...savedProject }, ...prev];
+      console.log('New project added to list:', newList);
+      return newList;
+    });
+    
+    toast({
+      title: 'New project added!',
+      description: 'Your new project has been added to Ideas.',
+    });
+  }
+  
+  setIsFormOpen(false);
+  setEditingProject(null);
+};
 
   const moveProject = (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => {
     if (from === to) return;
@@ -75,13 +93,13 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     let newDest;
 
     if (to === 'ideas') {
-      newDest = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...destList];
+      newDest = [{ ...projectToMove, progress: projectToMove.progress === 100 ? 99 : projectToMove.progress }, ...destList]; // FIX: Create new object
        toast({
           title: 'Project Moved',
           description: `"${projectToMove.title}" moved back to Ideas.`,
         });
     } else {
-      newDest = [{ ...projectToMove, progress: 100 }, ...destList];
+      newDest = [{ ...projectToMove, progress: 100 }, ...destList]; // FIX: Create new object
       toast({
           title: 'Project Completed!',
           description: `"${projectToMove.title}" has been moved to Completed.`,

@@ -54,7 +54,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
   };
 
   const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    setProjects(prev => prev.map(p => p.id === updatedProject.id ? { ...updatedProject } : p)); // FIX: Create new object
      toast({
         title: 'Progress Updated',
         description: `"${updatedProject.title}" progress saved.`,
@@ -63,7 +63,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
 
   const handleMarkAsCompleted = (project: Project) => {
     setIdeas(prev => prev.filter(p => p.id !== project.id));
-    setCompleted(prev => [{ ...project, progress: 100 }, ...prev]);
+    setCompleted(prev => [{ ...project, progress: 100 }, ...prev]); // FIX: Create new object
     toast({
         title: 'Project Completed!',
         description: `"${project.title}" has been moved to Completed.`,
@@ -72,7 +72,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
 
   const handleMoveToIdeas = (project: Project) => {
     setCompleted(prev => prev.filter(p => p.id !== project.id));
-    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress || 0 }, ...prev]);
+    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress || 0 }, ...prev]); // FIX: Create new object
     toast({
       title: 'Project Moved',
       description: `"${project.title}" moved back to Ideas.`,
