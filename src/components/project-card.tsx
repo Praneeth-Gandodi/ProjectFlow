@@ -4,9 +4,7 @@ import type { Project } from '@/app/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
-import { GripVertical, MoreVertical, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { MoreVertical, Edit2, Trash2, CheckCircle, ArrowLeft, CalendarIcon } from 'lucide-react';
 import { useDrag, useDrop, DragSourceMonitor } from 'react-dnd';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
@@ -23,6 +21,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 
 interface ProjectCardProps {
   project: Project;
@@ -59,8 +60,9 @@ export function ProjectCard({
   onMoveToIdeas
 }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [localProgress, setLocalProgress] = useState<number>(typeof project.progress === 'number' ? project.progress : 0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // useDrag — typed
   const [{ isDragging }, dragRef, previewRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
@@ -102,13 +104,37 @@ export function ProjectCard({
   useEffect(() => {
     setLocalProgress(typeof project.progress === 'number' ? project.progress : 0);
   }, [project.progress]);
+  
+  useEffect(() => {
+    if (isEditingProgress) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditingProgress]);
 
-  const handleSliderCommit = (value: number[]) => {
-    const newProgress = Array.isArray(value) && typeof value[0] === 'number' ? value[0] : localProgress;
-    try {
-      onUpdateProject({ ...project, progress: newProgress });
-    } catch (err) {
-      console.error('Failed to update project progress', err);
+  const handleProgressCommit = () => {
+    let newProgress = Number(localProgress);
+    if (isNaN(newProgress) || newProgress < 0) newProgress = 0;
+    if (newProgress > 100) newProgress = 100;
+    
+    setLocalProgress(newProgress);
+    setIsEditingProgress(false);
+
+    if (project.progress !== newProgress) {
+      try {
+        onUpdateProject({ ...project, progress: newProgress });
+      } catch (err) {
+        console.error('Failed to update project progress', err);
+      }
+    }
+  };
+
+  const handleProgressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleProgressCommit();
+    } else if (e.key === 'Escape') {
+      setLocalProgress(project.progress || 0);
+      setIsEditingProgress(false);
     }
   };
 
@@ -123,20 +149,25 @@ export function ProjectCard({
   const tags = Array.isArray(project.tags) ? project.tags.filter(Boolean) : [];
   const safeTitle = typeof project.title === 'string' && project.title.trim() !== '' ? project.title : 'Untitled Project';
   const safeDescription = typeof project.description === 'string' ? project.description : '';
+  
+  const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+  const isOverdue = dueDate && isPast(dueDate) && source === 'ideas';
+  const isSoon = dueDate && isWithinInterval(dueDate, { start: new Date(), end: addDays(new Date(), 7) }) && source === 'ideas';
 
   return (
-    <div ref={previewRef as unknown as React.LegacyRef<HTMLDivElement>} style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <div ref={ref} className="relative transition-shadow hover:shadow-lg rounded-lg h-full">
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 cursor-grab text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity z-10" aria-hidden>
-          <GripVertical size={20} />
-        </div>
-
-        <Card className="group/card w-full h-full flex flex-col">
-          {/* IMPORTANT: navigate in-app (no target="_blank") — keeps the same session so PIN isn't requested again */}
+    <div 
+      ref={previewRef as unknown as React.LegacyRef<HTMLDivElement>} 
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+      className="w-full"
+    >
+      <div ref={ref} className="relative transition-all hover:shadow-lg rounded-lg h-full group/card cursor-grab">
+        {/* Rectangular Card with proper aspect ratio */}
+        <Card className="w-full h-full flex flex-col p-5">
           <Link href={`/project/${project.id}`} className="contents">
-            <CardHeader className="pl-10 pr-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+            <CardHeader className="p-0 pb-4">
+              <div className="flex items-center gap-4">
+                {/* Logo Container - Using your size w-16 h-16 */}
+                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
                   {isExternal ? (
                     <img
                       src={logoSrc}
@@ -153,33 +184,52 @@ export function ProjectCard({
                       alt={`${safeTitle} logo`}
                       width={64}
                       height={64}
-                      className="rounded-lg border object-cover"
+                      className="w-16 h-16 object-cover"
                       unoptimized
                     />
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="font-headline text-xl">{safeTitle}</CardTitle>
-                  <CardDescription className="mt-1 line-clamp-2">{safeDescription}</CardDescription>
+                {/* Text Content */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <CardTitle className="font-headline text-lg leading-tight group-hover:underline truncate">
+                    {safeTitle}
+                  </CardTitle>
+                  <CardDescription className="text-sm line-clamp-2 leading-relaxed">
+                    {safeDescription}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Link>
 
-          <CardContent className="pl-10 space-y-4 flex-grow">
+          <CardContent className="space-y-3 flex-grow p-0 py-3">
             {tags.length > 0 && (
-              <div>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {dueDate && source === 'ideas' && (
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 text-xs font-medium',
+                  isOverdue ? 'text-red-500' : isSoon ? 'text-amber-600' : 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {isOverdue ? 'Overdue:' : 'Due:'} {format(dueDate, 'MMM d, yyyy')}
+                </span>
               </div>
             )}
           </CardContent>
 
-          <CardFooter className="pl-10 pr-4 flex flex-col items-start gap-3">
+          <CardFooter className="p-0 pt-2">
             {source === 'ideas' && (
               <Button
                 onClick={() => {
@@ -200,35 +250,38 @@ export function ProjectCard({
             )}
           </CardFooter>
 
-          <div className="absolute top-2 right-2 flex items-center gap-2">
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-              <PopoverTrigger asChild>
+          {/* Action buttons */}
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <div className="w-16 text-center">
+              {isEditingProgress && source === 'ideas' ? (
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  value={localProgress}
+                  onChange={(e) => setLocalProgress(Number(e.target.value.replace(/[^0-9]/g, '')))}
+                  onBlur={handleProgressCommit}
+                  onKeyDown={handleProgressKeyDown}
+                  className="h-7 w-12 text-center text-sm px-1"
+                />
+              ) : (
                 <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (source === 'ideas') setIsEditingProgress(true);
+                  }}
                   disabled={source === 'completed'}
-                  className="text-sm font-bold text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
-                  aria-label="Open progress slider"
+                  className={cn(
+                    "text-sm font-medium px-2 py-1 rounded-md transition-colors",
+                    source === 'ideas' 
+                      ? "text-primary cursor-pointer hover:bg-accent" 
+                      : "text-muted-foreground cursor-not-allowed"
+                  )}
+                  aria-label="Edit progress"
                 >
-                  {source === 'completed' ? '100' : `${Math.round(localProgress ?? 0)}` }%
+                  {source === 'completed' ? '100%' : `${Math.round(localProgress ?? 0)}%`}
                 </button>
-              </PopoverTrigger>
-
-              {source === 'ideas' && (
-                <PopoverContent className="w-48 p-2">
-                  <p className="text-xs font-medium text-center mb-2">Set Progress</p>
-                  <Slider
-                    value={[localProgress ?? 0]}
-                    max={100}
-                    step={1}
-                    onValueChange={(value: number[]) => {
-                      if (Array.isArray(value) && typeof value[0] === 'number') {
-                        setLocalProgress(value[0]);
-                      }
-                    }}
-                    onValueCommit={(value: number[]) => handleSliderCommit(value)}
-                  />
-                </PopoverContent>
               )}
-            </Popover>
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -242,6 +295,13 @@ export function ProjectCard({
                   <Edit2 className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </DropdownMenuItem>
+
+                {source === 'completed' && (
+                  <DropdownMenuItem onClick={() => { try { onMoveToIdeas(project); } catch (err) { console.error(err); } }}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <span>Move to Ideas</span>
+                  </DropdownMenuItem>
+                )}
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
