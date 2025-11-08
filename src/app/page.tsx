@@ -17,6 +17,17 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { getLogoBlob } from '@/lib/logo-storage';
+
+// Helper to convert Blob to Base64 data URL
+const blobToDataURL = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+};
 
 export default function Home() {
   const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
@@ -41,12 +52,47 @@ export default function Home() {
     document.body.removeChild(element);
   }, []);
 
-  const handleExport = useCallback((format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => {
+  const handleExport = useCallback(async (format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     switch (format) {
       case 'json': {
-        const allData = { ideas, completed, links, courses, exportedAt: new Date().toISOString() };
-        downloadFile(`projectflow-backup-${timestamp}.json`, JSON.stringify(allData, null, 2), 'application/json');
+        try {
+          toast({ title: "Exporting data...", description: "Preparing your backup file." });
+
+          // Process projects to embed local logos
+          const processItems = async <T extends Project | Course>(items: T[]): Promise<T[]> => {
+            return Promise.all(
+              items.map(async (item) => {
+                if (item.logo?.startsWith('indexeddb:')) {
+                  const blob = await getLogoBlob(item.logo.replace('indexeddb:', ''));
+                  if (blob) {
+                    const dataUrl = await blobToDataURL(blob);
+                    return { ...item, logo: dataUrl };
+                  }
+                }
+                return item;
+              })
+            );
+          };
+
+          const exportableIdeas = await processItems(ideas);
+          const exportableCompleted = await processItems(completed);
+          const exportableCourses = await processItems(courses);
+
+          const allData = {
+            ideas: exportableIdeas,
+            completed: exportableCompleted,
+            links,
+            courses: exportableCourses,
+            exportedAt: new Date().toISOString(),
+          };
+
+          downloadFile(`projectflow-backup-${timestamp}.json`, JSON.stringify(allData, null, 2), 'application/json');
+          toast({ title: "Export complete!", description: "Your data has been saved." });
+        } catch (error) {
+          console.error("Export failed:", error);
+          toast({ variant: 'destructive', title: "Export Failed", description: "Could not create backup file." });
+        }
         break;
       }
       case 'csv-projects': {
@@ -77,7 +123,7 @@ export default function Home() {
         break;
       }
     }
-  }, [ideas, completed, links, courses, downloadFile]);
+  }, [ideas, completed, links, courses, downloadFile, toast]);
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -93,11 +139,12 @@ export default function Home() {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
         
-        if (data.ideas || data.completed || data.links || data.courses) {
-          setIdeas(data.ideas || INITIAL_IDEAS);
-          setCompleted(data.completed || INITIAL_COMPLETED);
-          setLinks(data.links || INITIAL_LINKS);
-          setCourses(data.courses || INITIAL_COURSES);
+        // Basic validation to ensure it's a plausible backup file
+        if (data && typeof data === 'object' && ('ideas' in data || 'completed' in data || 'links' in data || 'courses' in data)) {
+          setIdeas(data.ideas || []);
+          setCompleted(data.completed || []);
+          setLinks(data.links || []);
+          setCourses(data.courses || []);
           toast({ title: 'Import Successful', description: 'Your data has been restored.' });
         } else {
           throw new Error('Invalid backup file format.');
@@ -105,10 +152,14 @@ export default function Home() {
       } catch (error) {
         console.error('Import failed:', error);
         toast({ variant: 'destructive', title: 'Import Failed', description: 'The selected file is not a valid backup file.' });
+      } finally {
+        // Reset the input value to allow importing the same file again
+        if (event.target) {
+            event.target.value = '';
+        }
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
   };
   
   if (!isClient) {
