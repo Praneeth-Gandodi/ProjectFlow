@@ -201,6 +201,9 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
     const finalLogo = values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`;
 
     const projectData: Project = {
+      // Keep existing properties when editing
+      ...(project || {}),
+      // Overwrite with form values
       id: project?.id || `idea-${Date.now()}`,
       title: values.title,
       description: values.description || '',
