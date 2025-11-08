@@ -33,6 +33,11 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
     setEditingProject({ ...project, source });
     setIsFormOpen(true);
   };
+  
+  const handleUpdateProject = (updatedProject: Project) => {
+    const targetList = updatedProject.source === 'completed' ? setCompleted : setIdeas;
+    targetList(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  }
 
   const moveProject = (id: string, from: 'ideas' | 'completed', to: 'ideas' | 'completed') => {
     if (from === to) return;
@@ -90,7 +95,7 @@ export function ProjectTab({ projects, setProjects, setIdeas, setCompleted, allI
         setIsOpen={setIsFormOpen}
         project={editingProject}
         setIdeas={setIdeas}
-        setCompleted={setCompleted}
+        onUpdateProject={handleUpdateProject}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,7 +32,7 @@ interface ProjectFormProps {
   setIsOpen: (open: boolean) => void;
   project: (Project & { source?: 'ideas' | 'completed' }) | null;
   setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
-  setCompleted: React.Dispatch<React.SetStateAction<Project[]>>;
+  onUpdateProject: (updatedProject: Project) => void;
 }
 
 const formSchema = z.object({
@@ -70,7 +70,7 @@ const requirementsFromString = (s?: string): string | string[] => {
   return lines;
 };
 
-export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted }: ProjectFormProps) {
+export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProject }: ProjectFormProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -183,7 +183,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
   };
 
   const onSubmit = (values: ProjectFormData) => {
-    const setTarget = project?.source === 'completed' ? setCompleted : setIdeas;
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
     if (project) {
@@ -200,7 +199,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, setCompleted
         repoUrl: values.repoUrl || pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
         dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       };
-      setTarget(prev => prev.map(p => (p.id === project.id ? updatedProject : p)));
+      onUpdateProject(updatedProject);
       toast({ title: 'Project updated!' });
     } else {
       // Adding new project
