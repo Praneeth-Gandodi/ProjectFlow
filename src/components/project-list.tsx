@@ -72,7 +72,7 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
 
   const handleMoveToIdeas = (project: Project) => {
     setCompleted(prev => prev.filter(p => p.id !== project.id));
-    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress }, ...prev]);
+    setIdeas(prev => [{ ...project, progress: project.progress === 100 ? 99 : project.progress || 0 }, ...prev]);
     toast({
       title: 'Project Moved',
       description: `"${project.title}" moved back to Ideas.`,

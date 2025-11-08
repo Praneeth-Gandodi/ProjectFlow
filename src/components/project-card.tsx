@@ -161,12 +161,10 @@ export function ProjectCard({
       className="w-full"
     >
       <div ref={ref} className="relative transition-all hover:shadow-lg rounded-lg h-full group/card cursor-grab">
-        {/* Rectangular Card with proper aspect ratio */}
         <Card className="w-full h-full flex flex-col p-5">
           <Link href={`/project/${project.id}`} className="contents">
             <CardHeader className="p-0 pb-4">
               <div className="flex items-start gap-4">
-                {/* Logo Container */}
                 <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
                   {isExternal ? (
                     <img
@@ -190,7 +188,6 @@ export function ProjectCard({
                   )}
                 </div>
 
-                {/* Text Content */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <CardTitle className="font-headline text-lg leading-tight group-hover:underline truncate">
                     {safeTitle}
@@ -230,7 +227,6 @@ export function ProjectCard({
           </CardContent>
 
 
-          {/* Action buttons */}
           <div className="absolute top-3 right-3 flex items-center gap-2">
             <div className="w-16 text-center">
               {isEditingProgress && source === 'ideas' ? (
@@ -292,7 +288,7 @@ export function ProjectCard({
                 </DropdownMenuItem>
 
                 {source === 'completed' && (
-                  <DropdownMenuItem onClick={() => { try { onMoveToIdeas(project); } catch (err) { console.error(err); } }}>
+                  <DropdownMenuItem onClick={() => onMoveToIdeas(project)}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     <span>Move to Ideas</span>
                   </DropdownMenuItem>
