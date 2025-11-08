@@ -30,8 +30,7 @@ interface ProjectFormProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   project: (Project & { source?: 'ideas' | 'completed' }) | null;
-  onUpdateProject: (updatedProject: Project) => void;
-  setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
+  onSave: (projectData: Project) => void;
 }
 
 const formSchema = z.object({
@@ -69,7 +68,7 @@ const requirementsFromString = (s?: string): string | string[] => {
   return lines;
 };
 
-export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProject }: ProjectFormProps) {
+export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -154,7 +153,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validation
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
       if (!allowedTypes.includes(file.type)) {
         toast({ 
@@ -177,11 +175,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        // Update both form state and preview immediately
-        form.setValue('logo', dataUrl, { 
-          shouldDirty: true, 
-          shouldValidate: true 
-        });
+        form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
         setLogoPreview(dataUrl);
         toast({ title: 'Image uploaded successfully!' });
       };
@@ -193,8 +187,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
         });
       };
       reader.readAsDataURL(file);
-
-      // Reset file input to allow re-uploading the same file
       e.target.value = '';
     }
   };
@@ -206,37 +198,22 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
   const onSubmit = (values: ProjectFormData) => {
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-    if (project) {
-      const pAny = { ...project } as any;
-      const updatedProject: Project = {
-        ...project,
-        title: values.title,
-        description: values.description || '',
-        logo: values.logo || project.logo, // Ensure logo is preserved
-        requirements: requirementsFromString(values.requirements),
-        links: values.links || [],
-        tags,
-        repoUrl: values.repoUrl || pAny.repoUrl || pAny.githubUrl || pAny.repository || '',
-        dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
-      };
-      onUpdateProject(updatedProject);
-      toast({ title: 'Project updated!' });
-    } else {
-      const newProject: Project = {
-        id: `idea-${Date.now()}`,
-        title: values.title,
-        description: values.description || '',
-        logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
-        requirements: requirementsFromString(values.requirements),
-        links: values.links || [],
-        progress: 0,
-        tags,
-        repoUrl: values.repoUrl || '',
-        dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
-      };
-      setIdeas(prev => [newProject, ...prev]);
-      toast({ title: 'New project added!' });
-    }
+    const projectData: Project = {
+      id: project?.id || `idea-${Date.now()}`,
+      title: values.title,
+      description: values.description || '',
+      logo: values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`,
+      requirements: requirementsFromString(values.requirements),
+      links: values.links || [],
+      progress: project?.progress ?? 0,
+      tags,
+      repoUrl: values.repoUrl || '',
+      dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+    };
+
+    onSave(projectData);
+    
+    toast({ title: project ? 'Project updated!' : 'New project added!' });
     localStorage.removeItem(draftKey);
     setIsOpen(false);
   };

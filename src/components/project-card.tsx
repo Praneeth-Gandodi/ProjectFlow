@@ -103,7 +103,6 @@ export function ProjectCard({
     setLocalProgress(typeof project.progress === 'number' ? project.progress : 0);
   }, [project.progress]);
   
-  // Reset image error state when project logo changes
   useEffect(() => {
     setImgError(false);
   }, [project.logo]);
@@ -176,7 +175,7 @@ export function ProjectCard({
                     height={64}
                     className="w-16 h-16 object-cover"
                     onError={handleImgError}
-                    unoptimized={isDataUrl} // Critical for data URLs
+                    unoptimized={isDataUrl}
                   />
                 </div>
 
