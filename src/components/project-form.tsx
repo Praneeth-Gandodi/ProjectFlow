@@ -77,7 +77,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
 
   const draftKey = getDraftKey(project?.id ?? null);
 
-  // initial default values
   const computeDefaults = (): ProjectFormData => {
     if (project) {
       const pAny = project as any;
@@ -115,36 +114,28 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
     name: 'links',
   });
 
-  // Reset form when dialog opens (load draft if present)
   useEffect(() => {
     if (!isOpen) return;
-
     let initialValues: ProjectFormData = computeDefaults();
-
     if (typeof window !== 'undefined') {
       const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
         try {
           const parsed = JSON.parse(savedDraft) as Partial<ProjectFormData>;
-          // merge parsed with defaults (parsed may omit fields)
           initialValues = { ...initialValues, ...parsed, dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined };
         } catch (e) {
           console.error('Failed to parse project draft', e);
         }
       }
     }
-
     form.reset(initialValues);
     setLogoPreview(initialValues.logo ?? null);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, project, draftKey]);
 
-  // Auto-save draft while the dialog is open (debounced-ish by controlled updates)
   useEffect(() => {
     if (!isOpen) return;
     const subscription = form.watch((value) => {
-      // Save draft only when there are dirty fields
       if (Object.keys(form.formState.dirtyFields).length > 0) {
         try {
           localStorage.setItem(draftKey, JSON.stringify(value));
@@ -164,18 +155,32 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validation
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please upload a JPG, PNG, GIF, or WEBP image.' });
+        return;
+      }
+      const maxSizeInMB = 2;
+      if (file.size > maxSizeInMB * 1024 * 1024) {
+        toast({ variant: 'destructive', title: 'File Too Large', description: `Image must be smaller than ${maxSizeInMB}MB.` });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
-        setLogoPreview(dataUrl);
+        setLogoPreview(dataUrl); // THIS IS THE CRITICAL FIX
       };
       reader.readAsDataURL(file);
+
+      // Reset file input to allow re-uploading the same file
+      e.target.value = '';
     }
   };
 
   const handleRequirementsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // keep the raw text for the form; client-side helper can auto-number if you want
     form.setValue('requirements', e.target.value, { shouldValidate: true, shouldDirty: true });
   };
 
@@ -183,13 +188,12 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
     if (project) {
-      // Editing existing project
       const pAny = { ...project } as any;
       const updatedProject: Project = {
         ...project,
         title: values.title,
         description: values.description || '',
-        logo: values.logo, // Ensure the new logo from the form is used
+        logo: values.logo,
         requirements: requirementsFromString(values.requirements),
         links: values.links || [],
         tags,
@@ -199,7 +203,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
       onUpdateProject(updatedProject);
       toast({ title: 'Project updated!' });
     } else {
-      // Adding new project
       const newProject: Project = {
         id: `idea-${Date.now()}`,
         title: values.title,
@@ -283,7 +286,6 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                     )}
                   />
 
-                  {/* GitHub Repository URL Field */}
                   <FormField
                     control={form.control}
                     name="repoUrl"
@@ -307,11 +309,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                   <div className="flex items-center gap-4 pt-4 pb-6">
                     {logoPreview && (
                       <Image
-                        src={
-                          logoPreview.startsWith('data:') || logoPreview.startsWith('http')
-                            ? logoPreview
-                            : '/placeholder.png'
-                        }
+                        src={logoPreview}
                         alt="Logo preview"
                         width={80}
                         height={80}
@@ -327,12 +325,11 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
                           <Upload className="mr-2 h-4 w-4" /> Upload
                         </Button>
 
-                        {/* native file input (hidden) */}
                         <input
                           ref={fileInputRef}
                           type="file"
                           className="hidden"
-                          accept="image/*"
+                          accept="image/jpeg, image/png, image/gif, image/webp"
                           onChange={handleFileChange}
                         />
 

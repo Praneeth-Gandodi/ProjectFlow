@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Project } from '@/app/types';
@@ -64,7 +65,6 @@ export function ProjectCard({
   const [localProgress, setLocalProgress] = useState<number>(typeof project.progress === 'number' ? project.progress : 0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // useDrag — typed
   const [{ isDragging }, dragRef, previewRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
     type: 'project',
     item: { id: project?.id ?? '', source },
@@ -73,7 +73,6 @@ export function ProjectCard({
     }),
   }), [project?.id, source]);
 
-  // useDrop — typed
   const [, dropRef] = useDrop<DragItem, void, unknown>(() => ({
     accept: 'project',
     hover: (item) => {
@@ -88,7 +87,6 @@ export function ProjectCard({
     },
   }), [project?.id, source, moveCard]);
 
-  // attach drag/drop refs safely
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -139,11 +137,16 @@ export function ProjectCard({
   };
 
   const rawLogo = (project && (project as any).logo) ?? '';
+  const isDataUrl = typeof rawLogo === 'string' && rawLogo.startsWith('data:image');
   const logoSrc = typeof rawLogo === 'string' && rawLogo.trim() !== '' ? rawLogo.trim() : PLACEHOLDER_DATA_URI;
-  const isExternal = /^https?:\/\//i.test(logoSrc);
+  
+  const [effectiveLogoSrc, setEffectiveLogoSrc] = useState(logoSrc);
+  useEffect(() => {
+    setEffectiveLogoSrc(logoSrc);
+  }, [logoSrc]);
 
-  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = PLACEHOLDER_DATA_URI;
+  const handleImgError = () => {
+    setEffectiveLogoSrc(PLACEHOLDER_DATA_URI);
   };
 
   const tags = Array.isArray(project.tags) ? project.tags.filter(Boolean) : [];
@@ -166,26 +169,15 @@ export function ProjectCard({
             <CardHeader className="p-0 pb-4">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
-                  {isExternal ? (
-                    <img
-                      src={logoSrc}
-                      alt={`${safeTitle} logo`}
-                      width={64}
-                      height={64}
-                      className="w-16 h-16 object-cover"
-                      onError={handleImgError}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Image
-                      src={logoSrc}
-                      alt={`${safeTitle} logo`}
-                      width={64}
-                      height={64}
-                      className="w-16 h-16 object-cover"
-                      unoptimized
-                    />
-                  )}
+                  <Image
+                    src={effectiveLogoSrc}
+                    alt={`${safeTitle} logo`}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 object-cover"
+                    onError={handleImgError}
+                    unoptimized={isDataUrl} // CRITICAL FIX for base64 URLs
+                  />
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-1">
