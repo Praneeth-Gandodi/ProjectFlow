@@ -136,9 +136,18 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
     const subscription = form.watch((value) => {
       if (Object.keys(form.formState.dirtyFields).length > 0) {
         try {
-          localStorage.setItem(draftKey, JSON.stringify(value));
+          const draftValue = { ...value };
+          // Do not save large data URLs in the draft to avoid quota errors
+          if (draftValue.logo?.startsWith('data:image')) {
+            delete draftValue.logo;
+          }
+          localStorage.setItem(draftKey, JSON.stringify(draftValue));
         } catch (e) {
-          console.error('Failed to save draft', e);
+          if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+             console.warn('LocalStorage quota exceeded. Could not save draft.');
+          } else {
+             console.error('Failed to save draft', e);
+          }
         }
       }
     });
