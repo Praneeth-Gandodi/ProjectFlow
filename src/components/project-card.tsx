@@ -1,7 +1,7 @@
 'use client';
 
 import type { Project } from '@/app/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Edit2, Trash2, CheckCircle, ArrowLeft, CalendarIcon } from 'lucide-react';
@@ -165,8 +165,8 @@ export function ProjectCard({
         <Card className="w-full h-full flex flex-col p-5">
           <Link href={`/project/${project.id}`} className="contents">
             <CardHeader className="p-0 pb-4">
-              <div className="flex items-center gap-4">
-                {/* Logo Container - Using your size w-16 h-16 */}
+              <div className="flex items-start gap-4">
+                {/* Logo Container */}
                 <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border">
                   {isExternal ? (
                     <img
@@ -191,7 +191,7 @@ export function ProjectCard({
                 </div>
 
                 {/* Text Content */}
-                <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex-1 min-w-0 space-y-1">
                   <CardTitle className="font-headline text-lg leading-tight group-hover:underline truncate">
                     {safeTitle}
                   </CardTitle>
@@ -229,26 +229,6 @@ export function ProjectCard({
             )}
           </CardContent>
 
-          <CardFooter className="p-0 pt-2">
-            {source === 'ideas' && (
-              <Button
-                onClick={() => {
-                  try {
-                    onMarkAsCompleted(project);
-                  } catch (err) {
-                    console.error('Mark as completed failed', err);
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                aria-label={`Mark ${safeTitle} as completed`}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Mark as Completed
-              </Button>
-            )}
-          </CardFooter>
 
           {/* Action buttons */}
           <div className="absolute top-3 right-3 flex items-center gap-2">
@@ -282,6 +262,21 @@ export function ProjectCard({
                 </button>
               )}
             </div>
+
+            {source === 'ideas' && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkAsCompleted(project);
+                  }}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50"
+                  aria-label={`Mark ${safeTitle} as completed`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                </Button>
+              )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
