@@ -81,30 +81,29 @@ export function ProjectList({ projects, setProjects, onEdit, columnId, onDropIte
 
   return (
     <div ref={drop} className={`min-h-[300px] transition-colors ${isOver ? 'bg-accent/50' : ''} rounded-lg p-1`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {projects.length > 0 ? (
-                projects.map((project) => (
-                    <ProjectCard
-                        key={project.id}
-                        project={project}
-                        onEdit={() => onEdit(project, columnId)}
-                        onDelete={() => handleDelete(project.id)}
-                        moveCard={moveCard}
-                        source={columnId}
-                        onUpdateProject={handleUpdateProject}
-                        onMarkAsCompleted={handleMarkAsCompleted}
-                        onMoveToIdeas={handleMoveToIdeas}
-                    />
-                ))
-            ) : (
-                 <div className="col-span-full text-center text-muted-foreground py-10">
-                    {
-                      isOver ? "Release to drop" : 
-                      (columnId === 'ideas' ? "No ideas yet. Add one or drag a completed project here." : "No completed projects yet. Drag an idea here to complete it.")
-                    }
-                </div>
-            )}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+        {projects.length > 0 ? (
+          projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onEdit={() => onEdit(project, columnId)}
+              onDelete={() => handleDelete(project.id)}
+              moveCard={moveCard}
+              source={columnId}
+              onUpdateProject={handleUpdateProject}
+              onMarkAsCompleted={handleMarkAsCompleted}
+              onMoveToIdeas={handleMoveToIdeas}
+            />
+          ))
+        ) : (
+          <div className="col-span-full text-center text-muted-foreground py-10">
+            {isOver ? "Release to drop" : 
+             (columnId === 'ideas' ? "No ideas yet. Add one or drag a completed project here." : "No completed projects yet. Drag an idea here to complete it.")
+            }
+          </div>
+        )}
+      </div>
     </div>
   );
 }
