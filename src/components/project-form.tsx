@@ -31,8 +31,8 @@ interface ProjectFormProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   project: (Project & { source?: 'ideas' | 'completed' }) | null;
-  setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
   onUpdateProject: (updatedProject: Project) => void;
+  setIdeas: React.Dispatch<React.SetStateAction<Project[]>>;
 }
 
 const formSchema = z.object({
@@ -136,10 +136,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
 
     form.reset(initialValues);
     setLogoPreview(initialValues.logo ?? null);
-    // ensure field array has values (react-hook-form needs it)
-    if (!initialValues.links || initialValues.links.length === 0) {
-      // don't append here; field array will handle append when user adds
-    }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, project, draftKey]);
 
@@ -171,7 +168,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         form.setValue('logo', dataUrl, { shouldDirty: true, shouldValidate: true });
-        setLogoPreview(dataUrl); // This line fixes the bug
+        setLogoPreview(dataUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -192,7 +189,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, setIdeas, onUpdateProj
         ...project,
         title: values.title,
         description: values.description || '',
-        logo: values.logo || project.logo,
+        logo: values.logo, // Ensure the new logo from the form is used
         requirements: requirementsFromString(values.requirements),
         links: values.links || [],
         tags,
