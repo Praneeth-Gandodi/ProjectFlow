@@ -89,12 +89,12 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
         dueDate: project.dueDate ? new Date(project.dueDate) : undefined,
       };
     }
-    const defaultLogo = `https://picsum.photos/seed/${Date.now()}/200/200`;
+    // For new projects, start with an empty logo string.
     return {
       title: '',
       description: '',
       requirements: '1. ',
-      logo: defaultLogo,
+      logo: '',
       tags: '',
       repoUrl: '',
       links: [],
@@ -162,7 +162,7 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
         });
         return;
       }
-      const maxSizeInMB = 5;
+      const maxSizeInMB = 2;
       if (file.size > maxSizeInMB * 1024 * 1024) {
         toast({ 
           variant: 'destructive', 
@@ -198,11 +198,13 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
   const onSubmit = (values: ProjectFormData) => {
     const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+    const finalLogo = values.logo || `https://picsum.photos/seed/${Date.now()}/200/200`;
+
     const projectData: Project = {
       id: project?.id || `idea-${Date.now()}`,
       title: values.title,
       description: values.description || '',
-      logo: values.logo,
+      logo: finalLogo,
       requirements: requirementsFromString(values.requirements),
       links: values.links || [],
       progress: project?.progress ?? 0,
@@ -233,6 +235,10 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
       setIsOpen(true);
     }
   };
+  
+  const currentLogo = form.watch('logo');
+  const previewSrc = logoPreview || currentLogo;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -304,15 +310,19 @@ export function ProjectForm({ isOpen, setIsOpen, project, onSave }: ProjectFormP
 
                   <div className="flex items-center gap-4 pt-4 pb-6">
                     <div className="flex-shrink-0">
-                      <div className="relative w-20 h-20 rounded-lg border overflow-hidden bg-muted">
-                        <Image
-                          src={logoPreview || '/placeholder.png'}
-                          alt="Logo preview"
-                          fill
-                          className="object-cover"
-                          unoptimized={logoPreview?.startsWith('data:')}
-                          onError={() => setLogoPreview('/placeholder.png')}
-                        />
+                       <div className="relative w-20 h-20 rounded-lg border overflow-hidden bg-muted">
+                         {previewSrc ? (
+                            <Image
+                              src={previewSrc}
+                              alt="Logo preview"
+                              fill
+                              className="object-cover"
+                              unoptimized={previewSrc?.startsWith('data:')}
+                              onError={() => setLogoPreview('/placeholder.png')}
+                            />
+                         ) : (
+                           <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Logo</div>
+                         )}
                       </div>
                     </div>
 
