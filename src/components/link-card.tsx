@@ -35,7 +35,7 @@ type DragItem = {
 export function LinkCard({ link, onEdit, onDelete, moveCard }: LinkCardProps) {
     const displayUrl = link.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
     
-    const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${link.url}`;
+    const faviconUrl = `https://www.google.com/s2/favicons?sz=128&domain_url=${link.url}`;
 
     const ref = useRef<HTMLDivElement | null>(null);
 
@@ -75,12 +75,12 @@ export function LinkCard({ link, onEdit, onDelete, moveCard }: LinkCardProps) {
             <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center justify-between">
                 <span className="flex items-center gap-3">
-                    <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                    <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
                         <Image 
                         src={faviconUrl}
                         alt={`${link.title} favicon`}
-                        width={24}
-                        height={24}
+                        width={32}
+                        height={32}
                         className="object-contain"
                         />
                     </div>
