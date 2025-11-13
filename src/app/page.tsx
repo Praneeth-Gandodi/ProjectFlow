@@ -17,7 +17,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { getLogoBlob } from '@/lib/logo-storage';
+import { getLogoBlob, saveLogo } from '@/lib/logo-storage';
 
 // Helper to convert Blob to Base64 data URL
 const blobToDataURL = (blob: Blob): Promise<string> => {
@@ -28,6 +28,20 @@ const blobToDataURL = (blob: Blob): Promise<string> => {
     reader.readAsDataURL(blob);
   });
 };
+
+// Helper to convert a data URL to a Blob
+const dataURLToBlob = (dataURL: string): Blob => {
+  const parts = dataURL.split(';base64,');
+  const contentType = parts[0].split(':')[1];
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  return new Blob([uInt8Array], { type: contentType });
+};
+
 
 export default function Home() {
   const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
@@ -129,22 +143,48 @@ export default function Home() {
     importInputRef.current?.click();
   };
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
         
-        // Basic validation to ensure it's a plausible backup file
-        if (data && typeof data === 'object' && ('ideas' in data || 'completed' in data || 'links' in data || 'courses' in data)) {
-          setIdeas(data.ideas || []);
-          setCompleted(data.completed || []);
+        if (data && typeof data === 'object' && ('ideas' in data || 'completed' in data)) {
+          toast({ title: 'Importing data...', description: 'Please wait while we restore your workspace.' });
+          
+          const processImportedItems = async <T extends Project | Course>(items: T[]): Promise<T[]> => {
+            return Promise.all(
+              items.map(async (item) => {
+                if (item.logo?.startsWith('data:image')) {
+                  try {
+                    const blob = dataURLToBlob(item.logo);
+                    // We need a File object, so we'll create one from the blob
+                    const imageFile = new File([blob], "imported_logo.png", { type: blob.type });
+                    const id = await saveLogo(imageFile);
+                    return { ...item, logo: `indexeddb:${id}` };
+                  } catch (err) {
+                    console.error('Failed to import and save a logo:', err);
+                    return { ...item, logo: '' }; // Fallback to no logo on error
+                  }
+                }
+                return item;
+              })
+            );
+          };
+
+          const importedIdeas = await processImportedItems(data.ideas || []);
+          const importedCompleted = await processImportedItems(data.completed || []);
+          const importedCourses = await processImportedItems(data.courses || []);
+
+          setIdeas(importedIdeas);
+          setCompleted(importedCompleted);
           setLinks(data.links || []);
-          setCourses(data.courses || []);
+          setCourses(importedCourses);
+          
           toast({ title: 'Import Successful', description: 'Your data has been restored.' });
         } else {
           throw new Error('Invalid backup file format.');
@@ -153,14 +193,13 @@ export default function Home() {
         console.error('Import failed:', error);
         toast({ variant: 'destructive', title: 'Import Failed', description: 'The selected file is not a valid backup file.' });
       } finally {
-        // Reset the input value to allow importing the same file again
         if (event.target) {
             event.target.value = '';
         }
       }
     };
     reader.readAsText(file);
-  };
+  }, [setIdeas, setCompleted, setLinks, setCourses, toast]);
   
   if (!isClient) {
     return null;
@@ -219,3 +258,5 @@ export default function Home() {
     </DndProvider>
   );
 }
+
+    
