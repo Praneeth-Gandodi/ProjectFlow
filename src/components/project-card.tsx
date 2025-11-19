@@ -10,6 +10,7 @@ import { useDrag, useDrop, DragSourceMonitor } from 'react-dnd';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,12 +129,17 @@ export function ProjectCard({
 
   return (
     <div ref={previewRef} style={{ opacity: isDragging ? 0.5 : 1 }} className="w-full">
-      <div ref={ref} className="relative transition-all hover:shadow-lg rounded-lg h-full group/card cursor-grab">
-        <Card className="w-full h-full flex flex-col p-5">
+      <motion.div
+        ref={ref}
+        whileHover={{ y: -4 }}
+        transition={{ type: "spring", stiffness: 300 }}
+        className="relative rounded-lg h-full group/card cursor-grab"
+      >
+        <Card className="glass-card w-full h-full flex flex-col p-5 border-none shadow-sm">
           <Link href={`/project/${project.id}`} className="contents">
             <CardHeader className="p-0 pb-4">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted border relative">
+                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted/50 border border-white/10 relative shadow-inner">
                   <Image
                     src={logoUrl || PLACEHOLDER_DATA_URI}
                     alt={`${safeTitle} logo`}
@@ -144,7 +150,7 @@ export function ProjectCard({
                   />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
-                  <CardTitle className="font-headline text-lg leading-tight group-hover:underline truncate">
+                  <CardTitle className="font-headline text-lg leading-tight group-hover:text-primary transition-colors truncate">
                     {safeTitle}
                   </CardTitle>
                   <CardDescription className="text-sm line-clamp-2 leading-relaxed">
@@ -159,7 +165,7 @@ export function ProjectCard({
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
+                  <Badge key={tag} variant="secondary" className="text-xs bg-secondary/50 hover:bg-secondary">
                     {tag}
                   </Badge>
                 ))}
@@ -173,7 +179,7 @@ export function ProjectCard({
             )}
           </CardContent>
 
-          <div className="absolute top-3 right-3 flex items-center gap-2">
+          <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200">
             <div className="w-16 text-center">
               {isEditingProgress && source === 'ideas' ? (
                 <Input
@@ -183,13 +189,13 @@ export function ProjectCard({
                   onChange={(e) => setLocalProgress(Number(e.target.value.replace(/[^0-9]/g, '')))}
                   onBlur={handleProgressCommit}
                   onKeyDown={handleProgressKeyDown}
-                  className="h-7 w-12 text-center text-sm px-1"
+                  className="h-7 w-12 text-center text-sm px-1 bg-background/80 backdrop-blur"
                 />
               ) : (
                 <button
                   onClick={(e) => { e.preventDefault(); if (source === 'ideas') setIsEditingProgress(true); }}
                   disabled={source === 'completed'}
-                  className={cn("text-sm font-medium px-2 py-1 rounded-md transition-colors", source === 'ideas' ? "text-primary cursor-pointer hover:bg-accent" : "text-muted-foreground cursor-not-allowed")}
+                  className={cn("text-sm font-medium px-2 py-1 rounded-md transition-colors backdrop-blur-sm", source === 'ideas' ? "text-primary cursor-pointer hover:bg-primary/10" : "text-muted-foreground cursor-not-allowed")}
                   aria-label="Edit progress"
                 >
                   {source === 'completed' ? '100%' : `${Math.round(localProgress ?? 0)}%`}
@@ -198,23 +204,23 @@ export function ProjectCard({
             </div>
 
             {source === 'ideas' && (
-              <Button onClick={() => onMarkAsCompleted(project)} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50" aria-label={`Mark ${safeTitle} as completed`}>
+              <Button onClick={() => onMarkAsCompleted(project)} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-500/10" aria-label={`Mark ${safeTitle} as completed`}>
                 <CheckCircle className="h-5 w-5" />
               </Button>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions"><MoreVertical size={16} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" aria-label="More actions"><MoreVertical size={16} /></Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="glass-panel">
                 <DropdownMenuItem onClick={onEdit}><Edit2 className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                 {source === 'completed' && (<DropdownMenuItem onClick={() => onMoveToIdeas(project)}><ArrowLeft className="mr-2 h-4 w-4" /><span>Move to Ideas</span></DropdownMenuItem>)}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="glass-panel">
                     <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete this project.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
                   </AlertDialogContent>
@@ -223,7 +229,7 @@ export function ProjectCard({
             </DropdownMenu>
           </div>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

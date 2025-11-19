@@ -12,13 +12,15 @@ interface AppHeaderProps {
 
 export function AppHeader({ searchTerm, setSearchTerm, onExport, onImport }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-screen-xl mx-auto px-6 py-3">
         <div className="flex items-center justify-between h-10">
           {/* Left: Logo */}
-          <a className="flex items-center space-x-2" href="/">
-            <AppLogo className="h-6 w-6" />
-            <span className="font-bold font-headline text-lg">ProjectFlow</span>
+          <a className="flex items-center space-x-2 group" href="/">
+            <div className="bg-primary/10 p-1.5 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <AppLogo className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-bold font-headline text-lg tracking-tight">ProjectFlow</span>
           </a>
 
           {/* Right: Theme + Profile */}

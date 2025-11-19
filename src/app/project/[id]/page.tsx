@@ -31,14 +31,13 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import type { Project, Note, Link as LinkType } from '@/app/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useDataStore } from '@/hooks/use-data-store';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
-import { INITIAL_IDEAS, INITIAL_COMPLETED } from '@/app/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLogoUrl } from '@/lib/useLogoUrl';
@@ -59,8 +58,8 @@ export default function ProjectDetailsPage() {
 
   const { toast } = useToast();
 
-  const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
-  const [completed, setCompleted, isCompletedLoaded] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
+  const { ideas, completed, isLoading, actions } = useDataStore();
+  const { updateProject } = actions;
 
   const [project, setProject] = useState<Project | null>(null);
   const { url: logoDisplayUrl } = useLogoUrl(project?.logo);
@@ -110,7 +109,7 @@ export default function ProjectDetailsPage() {
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
   const { font } = useContext(ProfileContext);
-  const isDataLoaded = isIdeasLoaded && isCompletedLoaded;
+  const isDataLoaded = !isLoading;
 
   const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -201,8 +200,7 @@ export default function ProjectDetailsPage() {
   const persistProject = (updatedProj: Project) => {
     if (!updatedProj) return;
     const isCompletedProject = completed.some(p => p.id === updatedProj.id);
-    const setTarget = isCompletedProject ? setCompleted : setIdeas;
-    setTarget(prev => prev.map(p => p.id === updatedProj.id ? updatedProj : p));
+    updateProject(updatedProj, isCompletedProject ? 'completed' : 'idea');
     setProject(updatedProj);
   };
 
@@ -224,8 +222,8 @@ export default function ProjectDetailsPage() {
     const updatedProject = pAny as Project;
     persistProject(updatedProject);
 
-    toast({ 
-      title: 'Project Saved!', 
+    toast({
+      title: 'Project Saved!',
       description: 'Your changes have been saved successfully.',
     });
   };
@@ -246,10 +244,10 @@ export default function ProjectDetailsPage() {
   // notes handlers
   const handleAddNote = () => {
     if (!project || !newNote.trim()) return;
-    const note: Note = { 
-      id: `note-${Date.now()}`, 
-      date: new Date().toISOString(), 
-      content: newNote.trim() 
+    const note: Note = {
+      id: `note-${Date.now()}`,
+      date: new Date().toISOString(),
+      content: newNote.trim()
     };
 
     const pAny = { ...(project as any) };
@@ -260,8 +258,8 @@ export default function ProjectDetailsPage() {
 
     setProject(updatedProject);
     setNewNote('');
-    toast({ 
-      title: 'Note added!', 
+    toast({
+      title: 'Note added!',
       description: 'Your note has been saved to the project log.',
     });
   };
@@ -352,11 +350,11 @@ export default function ProjectDetailsPage() {
 
   const handlePinInputChange = (index: number, value: string, isConfirm = false) => {
     if (!/^\d?$/.test(value)) return; // Only allow digits
-    
+
     const targetArray = isConfirm ? pinConfirmInput : pinInput;
     const newArray = [...targetArray];
     newArray[index] = value;
-    
+
     if (isConfirm) {
       setPinConfirmInput(newArray);
     } else {
@@ -386,16 +384,16 @@ export default function ProjectDetailsPage() {
     const confirm = getPinValue(true);
 
     if (!/^\d{4}$/.test(pin)) {
-      toast({ 
-        title: 'Invalid PIN', 
+      toast({
+        title: 'Invalid PIN',
         description: 'PIN must be exactly 4 digits',
         variant: 'destructive'
       });
       return;
     }
     if (pin !== confirm) {
-      toast({ 
-        title: 'PINs do not match', 
+      toast({
+        title: 'PINs do not match',
         description: 'Please make sure both PINs are identical',
         variant: 'destructive'
       });
@@ -411,8 +409,8 @@ export default function ProjectDetailsPage() {
     setShowPinModal(false);
     setPinInput(['', '', '', '']);
     setPinConfirmInput(['', '', '', '']);
-    toast({ 
-      title: 'PIN Set', 
+    toast({
+      title: 'PIN Set',
       description: 'Your project API PIN has been saved securely.',
     });
   };
@@ -430,13 +428,13 @@ export default function ProjectDetailsPage() {
       setIsKeysUnlocked(true);
       setShowPinModal(false);
       setPinInput(['', '', '', '']);
-      toast({ 
-        title: 'Unlocked', 
+      toast({
+        title: 'Unlocked',
         description: 'API keys are now visible for this session.',
       });
     } else {
-      toast({ 
-        title: 'Incorrect PIN', 
+      toast({
+        title: 'Incorrect PIN',
         description: 'Please try again.',
         variant: 'destructive'
       });
@@ -456,16 +454,16 @@ export default function ProjectDetailsPage() {
   const confirmAddKey = () => {
     if (!project) return;
     if (!newKeyName.trim()) {
-      toast({ 
-        title: 'Name required', 
+      toast({
+        title: 'Name required',
         description: 'Please provide a name for this API key',
         variant: 'destructive'
       });
       return;
     }
     if (!newKeyValue.trim()) {
-      toast({ 
-        title: 'API key required', 
+      toast({
+        title: 'API key required',
         description: 'Please provide the actual API key value',
         variant: 'destructive'
       });
@@ -486,8 +484,8 @@ export default function ProjectDetailsPage() {
     setNewKeyValue('');
     setNewKeyDescription('');
     setShowAddKeyModal(false);
-    toast({ 
-      title: 'API Key Added', 
+    toast({
+      title: 'API Key Added',
       description: 'Your API key has been securely stored.',
     });
   };
@@ -495,17 +493,17 @@ export default function ProjectDetailsPage() {
   // Update Key
   const confirmUpdateKey = () => {
     if (!editingKey) return;
-    
+
     handleUpdateApiKey(editingKey.id, {
       name: editingKey.name,
       website: editingKey.website,
       key: editingKey.key,
       description: editingKey.description,
     });
-    
+
     setEditingKey(null);
-    toast({ 
-      title: 'API Key Updated', 
+    toast({
+      title: 'API Key Updated',
       description: 'Your changes have been saved.',
     });
   };
@@ -513,16 +511,16 @@ export default function ProjectDetailsPage() {
   // Add Link
   const confirmAddLink = () => {
     if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
-      toast({ 
-        title: 'Title and URL required', 
+      toast({
+        title: 'Title and URL required',
         variant: 'destructive'
       });
       return;
     }
 
     if (!validateWebsiteUrl(newLinkUrl)) {
-      toast({ 
-        title: 'Invalid URL', 
+      toast({
+        title: 'Invalid URL',
         description: 'Please enter a valid URL starting with http:// or https://',
         variant: 'destructive'
       });
@@ -541,8 +539,8 @@ export default function ProjectDetailsPage() {
     setNewLinkUrl('');
     setNewLinkDescription('');
     setShowAddLinkModal(false);
-    toast({ 
-      title: 'Link Added', 
+    toast({
+      title: 'Link Added',
       description: 'Your link has been saved.',
     });
   };
@@ -551,14 +549,14 @@ export default function ProjectDetailsPage() {
   const confirmUpdateLink = () => {
     if (!editingLink) return;
 
-    const updatedLinks = editLinks.map(link => 
+    const updatedLinks = editLinks.map(link =>
       link.id === editingLink.id ? editingLink : link
     );
-    
+
     persistLinksQuick(updatedLinks);
     setEditingLink(null);
-    toast({ 
-      title: 'Link Updated', 
+    toast({
+      title: 'Link Updated',
       description: 'Your changes have been saved.',
     });
   };
@@ -631,11 +629,11 @@ export default function ProjectDetailsPage() {
 
   const handleGoToRepo = () => {
     if (!project) return;
-    
+
     // Try to find GitHub URL from project data
     const pAny = project as any;
     const repoUrl = pAny.repoUrl || pAny.githubUrl || pAny.repository;
-    
+
     if (repoUrl && validateWebsiteUrl(repoUrl)) {
       window.open(repoUrl, '_blank');
     } else {
@@ -645,7 +643,7 @@ export default function ProjectDetailsPage() {
         variant: 'destructive'
       });
     }
-    
+
     setShowContextMenu(false);
   };
 
@@ -667,9 +665,9 @@ export default function ProjectDetailsPage() {
       <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
         <AppHeader
           searchTerm=""
-          setSearchTerm={() => {}}
-          onExport={() => {}}
-          onImport={() => {}}
+          setSearchTerm={() => { }}
+          onExport={() => { }}
+          onImport={() => { }}
         />
 
         <main className="flex-1 w-full min-h-screen py-8 px-4 sm:px-6 md:px-8 lg:px-12">
@@ -702,14 +700,14 @@ export default function ProjectDetailsPage() {
           <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
           <p className="text-muted-foreground mb-8">The project you're looking for doesn't exist or may have been moved.</p>
           <Button onClick={() => router.push('/')} className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> 
+            <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Button>
         </div>
       </div>
     );
   }
-  
+
   const progress = project.progress ?? 0;
   const dueDate = project.dueDate ? new Date(project.dueDate) : null;
   const isCompleted = completed.some(p => p.id === project.id);
@@ -721,9 +719,9 @@ export default function ProjectDetailsPage() {
     <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
       <AppHeader
         searchTerm=""
-        setSearchTerm={() => {}}
-        onExport={() => {}}
-        onImport={() => {}}
+        setSearchTerm={() => { }}
+        onExport={() => { }}
+        onImport={() => { }}
       />
 
       <main className="flex-1 w-full min-h-screen py-6 px-4 sm:px-6 md:px-8 lg:px-12">
@@ -731,12 +729,12 @@ export default function ProjectDetailsPage() {
           {/* Header Section */}
           <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => router.push('/')}
                 className="gap-2"
               >
-                <ArrowLeft className="h-4 w-4" /> 
+                <ArrowLeft className="h-4 w-4" />
                 Back to Dashboard
               </Button>
               <div className="w-px h-6 bg-border"></div>
@@ -760,15 +758,15 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={handleRevert}
                 className="h-9 w-9"
               >
                 <X className="h-4 w-4" />
               </Button>
-              <Button 
+              <Button
                 onClick={handleSave}
                 size="icon"
                 className="h-9 w-9"
@@ -792,7 +790,7 @@ export default function ProjectDetailsPage() {
                         onContextMenu={handleProjectIconContextMenu}
                         className="cursor-context-menu w-48 h-48"
                       >
-                       <Image
+                        <Image
                           src={logoDisplayUrl || `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM4ODgiPlByb2plY3Q8L3RleHQ+PC9zdmc+`}
                           alt={`${project.title} logo`}
                           width={280}
@@ -810,7 +808,7 @@ export default function ProjectDetailsPage() {
                     <h1 className="text-2xl font-bold text-center">
                       {project.title}
                     </h1>
-                    
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Description</label>
                       <Textarea
@@ -832,8 +830,8 @@ export default function ProjectDetailsPage() {
                       <LinkIcon className="h-5 w-5" />
                       Project Links
                     </div>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
                       onClick={() => setShowAddLinkModal(true)}
                     >
@@ -842,64 +840,64 @@ export default function ProjectDetailsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-               <div className="space-y-2">
-                  {editLinks.length > 0 ? editLinks.map((link, index) => (
-                    <motion.div 
-                      key={link.id || `link-${index}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
-                    >
-                      <div 
-                        className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center cursor-pointer"
-                        onClick={() => openLinkModal(link)}
+                  <div className="space-y-2">
+                    {editLinks.length > 0 ? editLinks.map((link, index) => (
+                      <motion.div
+                        key={link.id || `link-${index}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
                       >
-                        {validateWebsiteUrl(link.url) ? (
-                          <img 
-                            src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`}
-                            alt=""
-                            className="w-5 h-5"
-                          />
-                        ) : (
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-
-                      <div 
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => openLinkModal(link)}
-                      >
-                        <div className="text-sm font-medium truncate">{link.title}</div>
-                        <div className="text-xs text-muted-foreground truncate">{link.url}</div>
-                      </div>
-
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => startEditingLink(link)}
-                          className="h-7 w-7"
+                        <div
+                          className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center cursor-pointer"
+                          onClick={() => openLinkModal(link)}
                         >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteLink(link.id!)}
-                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          {validateWebsiteUrl(link.url) ? (
+                            <img
+                              src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`}
+                              alt=""
+                              className="w-5 h-5"
+                            />
+                          ) : (
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => openLinkModal(link)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                          <div className="text-sm font-medium truncate">{link.title}</div>
+                          <div className="text-xs text-muted-foreground truncate">{link.url}</div>
+                        </div>
+
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEditingLink(link)}
+                            className="h-7 w-7"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteLink(link.id!)}
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )) : (
+                      <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+                        <LinkIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No links yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">Add important project links</p>
                       </div>
-                    </motion.div>
-                  )) : (
-                    <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
-                      <LinkIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No links yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">Add important project links</p>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -914,8 +912,8 @@ export default function ProjectDetailsPage() {
                         <Lock className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
                       onClick={() => {
                         if (!isKeysUnlocked) {
@@ -933,9 +931,9 @@ export default function ProjectDetailsPage() {
                   <div className="space-y-2">
                     {apiKeys.length > 0 ? apiKeys.map((key) => {
                       const isUnmasked = isKeysUnlocked && unmaskedKeys[key.id];
-                      
+
                       return (
-                        <motion.div 
+                        <motion.div
                           key={key.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -943,8 +941,8 @@ export default function ProjectDetailsPage() {
                         >
                           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
                             {key.website && validateWebsiteUrl(key.website) ? (
-                              <img 
-                                src={getFaviconFor(key.website)} 
+                              <img
+                                src={getFaviconFor(key.website)}
                                 alt=""
                                 className="w-5 h-5"
                               />
@@ -989,7 +987,7 @@ export default function ProjectDetailsPage() {
                         </motion.div>
                       );
                     }) : (
-                      <div 
+                      <div
                         className="text-center py-8 border-2 border-dashed border-muted rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
                         onClick={() => {
                           if (!isKeysUnlocked) {
@@ -1022,9 +1020,9 @@ export default function ProjectDetailsPage() {
                         </span>
                       )}
                     </div>
-                    
-                    <Button 
-                      variant="outline" 
+
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => {
                         if (!project) return;
@@ -1065,12 +1063,12 @@ export default function ProjectDetailsPage() {
                       onChange={(e) => handleRequirementsChange(e.target.value)}
                       placeholder="1. Start typing your requirements... each new line becomes a numbered requirement"
                       className="w-full p-4 bg-transparent resize-none outline-none min-h-[400px] text-sm md:text-base leading-7 font-mono"
-                      style={{ 
+                      style={{
                         lineHeight: '1.75rem',
                       }}
                     />
                   </div>
-                  
+
                   <p className="text-xs text-muted-foreground mt-3">
                     Each new line automatically becomes a numbered requirement.
                   </p>
@@ -1099,8 +1097,8 @@ export default function ProjectDetailsPage() {
                         <p className="text-xs text-muted-foreground">
                           {newNote.length}/1000 characters
                         </p>
-                        <Button 
-                          onClick={handleAddNote} 
+                        <Button
+                          onClick={handleAddNote}
                           disabled={!newNote.trim()}
                           size="icon"
                           className="h-9 w-9"
@@ -1117,11 +1115,11 @@ export default function ProjectDetailsPage() {
                           {(project.notes ?? []).length} total entries
                         </span>
                       </div>
-                      
+
                       <div className="space-y-4 max-h-[400px] overflow-y-auto">
                         {(project.notes ?? []).length > 0 ? (
                           [...(project.notes ?? [])].slice().reverse().map((note, index) => (
-                            <motion.div 
+                            <motion.div
                               key={note.id}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
@@ -1136,7 +1134,7 @@ export default function ProjectDetailsPage() {
                                   {format(new Date(note.date), 'HH:mm')}
                                 </div>
                               </div>
-                              
+
                               <div className="flex-1 bg-muted/50 p-4 rounded-lg border relative min-h-[80px]">
                                 <p className="whitespace-pre-wrap text-sm pr-10">
                                   {note.content}
@@ -1199,23 +1197,23 @@ export default function ProjectDetailsPage() {
                           <div className="flex gap-3 justify-center">
                             {[0, 1, 2, 3].map((index) => (
                               <Input
-                              key={index}
-                              ref={(el: HTMLInputElement | null) => {
-                                pinInputRefs.current[index] = el;
-                              }}
-                              value={pinInput[index]}
-                              onChange={(e) => handlePinInputChange(index, e.target.value)}
-                              onKeyDown={(e) => handlePinKeyDown(index, e)}
-                              inputMode="numeric"
-                              type={showPinInput ? 'text' : 'password'}
-                              className="w-14 h-14 text-center text-xl font-mono"
-                              maxLength={1}
-                              autoFocus={index === 0}
-                            />
+                                key={index}
+                                ref={(el: HTMLInputElement | null) => {
+                                  pinInputRefs.current[index] = el;
+                                }}
+                                value={pinInput[index]}
+                                onChange={(e) => handlePinInputChange(index, e.target.value)}
+                                onKeyDown={(e) => handlePinKeyDown(index, e)}
+                                inputMode="numeric"
+                                type={showPinInput ? 'text' : 'password'}
+                                className="w-14 h-14 text-center text-xl font-mono"
+                                maxLength={1}
+                                autoFocus={index === 0}
+                              />
                             ))}
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="text-sm font-medium mb-3 block text-center">Confirm PIN</label>
                           <div className="flex gap-3 justify-center">
@@ -1234,28 +1232,28 @@ export default function ProjectDetailsPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between pt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setShowPinInput(!showPinInput)}
                           className="flex-shrink-0"
                         >
                           {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => { 
-                              setShowPinModal(false); 
-                              setPinInput(['', '', '', '']); 
-                              setPinConfirmInput(['', '', '', '']); 
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowPinModal(false);
+                              setPinInput(['', '', '', '']);
+                              setPinConfirmInput(['', '', '', '']);
                             }}
                           >
                             Cancel
                           </Button>
-                          <Button 
+                          <Button
                             onClick={confirmSetPin}
                             disabled={getPinValue().length !== 4 || getPinValue(true).length !== 4}
                           >
@@ -1270,44 +1268,44 @@ export default function ProjectDetailsPage() {
                         <label className="text-sm font-medium mb-3 block text-center">Enter 4-digit PIN</label>
                         <div className="flex gap-3 justify-center">
                           {[0, 1, 2, 3].map((index) => (
-                           <Input
-                            key={index}
-                            ref={(el: HTMLInputElement | null) => {
-                              pinInputRefs.current[index] = el;
-                            }}
-                            value={pinInput[index]}
-                            onChange={(e) => handlePinInputChange(index, e.target.value)}
-                            onKeyDown={(e) => handlePinKeyDown(index, e)}
-                            inputMode="numeric"
-                            type={showPinInput ? 'text' : 'password'}
-                            className="w-14 h-14 text-center text-xl font-mono"
-                            maxLength={1}
-                            autoFocus={index === 0}
-                          />
+                            <Input
+                              key={index}
+                              ref={(el: HTMLInputElement | null) => {
+                                pinInputRefs.current[index] = el;
+                              }}
+                              value={pinInput[index]}
+                              onChange={(e) => handlePinInputChange(index, e.target.value)}
+                              onKeyDown={(e) => handlePinKeyDown(index, e)}
+                              inputMode="numeric"
+                              type={showPinInput ? 'text' : 'password'}
+                              className="w-14 h-14 text-center text-xl font-mono"
+                              maxLength={1}
+                              autoFocus={index === 0}
+                            />
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between pt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setShowPinInput(!showPinInput)}
                           className="flex-shrink-0"
                         >
                           {showPinInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => { 
-                              setShowPinModal(false); 
-                              setPinInput(['', '', '', '']); 
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowPinModal(false);
+                              setPinInput(['', '', '', '']);
                             }}
                           >
                             Cancel
                           </Button>
-                          <Button 
+                          <Button
                             onClick={confirmUnlockPin}
                             disabled={getPinValue().length !== 4}
                           >
@@ -1343,69 +1341,69 @@ export default function ProjectDetailsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-4">
-                    <Input 
-                      value={editingKey ? editingKey.name : newKeyName} 
-                      onChange={(e) => editingKey ? 
-                        setEditingKey({...editingKey, name: e.target.value}) : 
+                    <Input
+                      value={editingKey ? editingKey.name : newKeyName}
+                      onChange={(e) => editingKey ?
+                        setEditingKey({ ...editingKey, name: e.target.value }) :
                         setNewKeyName(e.target.value)
-                      } 
-                      placeholder="Service Name (e.g. OpenAI, Stripe)" 
-                      required 
+                      }
+                      placeholder="Service Name (e.g. OpenAI, Stripe)"
+                      required
                     />
-                    
-                    <Input 
-                      value={editingKey ? editingKey.website || '' : newKeyWebsite} 
-                      onChange={(e) => editingKey ? 
-                        setEditingKey({...editingKey, website: e.target.value}) : 
+
+                    <Input
+                      value={editingKey ? editingKey.website || '' : newKeyWebsite}
+                      onChange={(e) => editingKey ?
+                        setEditingKey({ ...editingKey, website: e.target.value }) :
                         setNewKeyWebsite(e.target.value)
-                      } 
-                      placeholder="Website (optional)" 
+                      }
+                      placeholder="Website (optional)"
                     />
-                    
-                    <Input 
-                      value={editingKey ? editingKey.key : newKeyValue} 
-                      onChange={(e) => editingKey ? 
-                        setEditingKey({...editingKey, key: e.target.value}) : 
+
+                    <Input
+                      value={editingKey ? editingKey.key : newKeyValue}
+                      onChange={(e) => editingKey ?
+                        setEditingKey({ ...editingKey, key: e.target.value }) :
                         setNewKeyValue(e.target.value)
-                      } 
-                      placeholder="API Key Value" 
-                      className="font-mono" 
-                      required 
+                      }
+                      placeholder="API Key Value"
+                      className="font-mono"
+                      required
                     />
-                    
-                    <Textarea 
-                      value={editingKey ? editingKey.description || '' : newKeyDescription} 
-                      onChange={(e) => editingKey ? 
-                        setEditingKey({...editingKey, description: e.target.value}) : 
+
+                    <Textarea
+                      value={editingKey ? editingKey.description || '' : newKeyDescription}
+                      onChange={(e) => editingKey ?
+                        setEditingKey({ ...editingKey, description: e.target.value }) :
                         setNewKeyDescription(e.target.value)
-                      }                       placeholder="Optional description or notes about this API key" 
-                      rows={3} 
+                      } placeholder="Optional description or notes about this API key"
+                      rows={3}
                     />
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => { 
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         if (editingKey) {
                           setEditingKey(null);
                         } else {
-                          setShowAddKeyModal(false); 
-                          setNewKeyName(''); 
-                          setNewKeyWebsite(''); 
-                          setNewKeyValue(''); 
-                          setNewKeyDescription(''); 
+                          setShowAddKeyModal(false);
+                          setNewKeyName('');
+                          setNewKeyWebsite('');
+                          setNewKeyValue('');
+                          setNewKeyDescription('');
                         }
                       }}
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      onClick={editingKey ? confirmUpdateKey : confirmAddKey} 
+                    <Button
+                      onClick={editingKey ? confirmUpdateKey : confirmAddKey}
                       disabled={
-                        editingKey ? 
-                        !editingKey.name.trim() || !editingKey.key.trim() :
-                        !newKeyName.trim() || !newKeyValue.trim()
+                        editingKey ?
+                          !editingKey.name.trim() || !editingKey.key.trim() :
+                          !newKeyName.trim() || !newKeyValue.trim()
                       }
                     >
                       {editingKey ? 'Update Key' : 'Add Key'}
@@ -1437,59 +1435,59 @@ export default function ProjectDetailsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-4">
-                    <Input 
-                      value={editingLink ? editingLink.title : newLinkTitle} 
-                      onChange={(e) => editingLink ? 
-                        setEditingLink({...editingLink, title: e.target.value}) : 
+                    <Input
+                      value={editingLink ? editingLink.title : newLinkTitle}
+                      onChange={(e) => editingLink ?
+                        setEditingLink({ ...editingLink, title: e.target.value }) :
                         setNewLinkTitle(e.target.value)
-                      } 
-                      placeholder="Link Title" 
-                      required 
+                      }
+                      placeholder="Link Title"
+                      required
                     />
-                    
-                    <Input 
-                      value={editingLink ? editingLink.url : newLinkUrl} 
-                      onChange={(e) => editingLink ? 
-                        setEditingLink({...editingLink, url: e.target.value}) : 
+
+                    <Input
+                      value={editingLink ? editingLink.url : newLinkUrl}
+                      onChange={(e) => editingLink ?
+                        setEditingLink({ ...editingLink, url: e.target.value }) :
                         setNewLinkUrl(e.target.value)
-                      } 
-                      placeholder="https://example.com" 
-                      required 
+                      }
+                      placeholder="https://example.com"
+                      required
                     />
-                    
-                    <Textarea 
-                      value={editingLink ? editingLink.description || '' : newLinkDescription} 
-                      onChange={(e) => editingLink ? 
-                        setEditingLink({...editingLink, description: e.target.value}) : 
+
+                    <Textarea
+                      value={editingLink ? editingLink.description || '' : newLinkDescription}
+                      onChange={(e) => editingLink ?
+                        setEditingLink({ ...editingLink, description: e.target.value }) :
                         setNewLinkDescription(e.target.value)
-                      } 
-                      placeholder="Optional description" 
-                      rows={3} 
+                      }
+                      placeholder="Optional description"
+                      rows={3}
                     />
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => { 
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         if (editingLink) {
                           setEditingLink(null);
                         } else {
-                          setShowAddLinkModal(false); 
-                          setNewLinkTitle(''); 
-                          setNewLinkUrl(''); 
-                          setNewLinkDescription(''); 
+                          setShowAddLinkModal(false);
+                          setNewLinkTitle('');
+                          setNewLinkUrl('');
+                          setNewLinkDescription('');
                         }
                       }}
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      onClick={editingLink ? confirmUpdateLink : confirmAddLink} 
+                    <Button
+                      onClick={editingLink ? confirmUpdateLink : confirmAddLink}
                       disabled={
-                        editingLink ? 
-                        !editingLink.title.trim() || !editingLink.url.trim() :
-                        !newLinkTitle.trim() || !newLinkUrl.trim()
+                        editingLink ?
+                          !editingLink.title.trim() || !editingLink.url.trim() :
+                          !newLinkTitle.trim() || !newLinkUrl.trim()
                       }
                     >
                       {editingLink ? 'Update Link' : 'Add Link'}
@@ -1523,7 +1521,7 @@ export default function ProjectDetailsPage() {
                   <div className="flex items-start gap-4">
                     <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                       {validateWebsiteUrl(selectedLink.url) ? (
-                        <img 
+                        <img
                           src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(selectedLink.url).hostname}`}
                           alt=""
                           className="w-10 h-10"
@@ -1554,7 +1552,7 @@ export default function ProjectDetailsPage() {
                   </div>
                 </CardContent>
                 <div className="flex justify-end gap-2 p-4 pt-0">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => window.open(selectedLink.url, '_blank')}
                   >
@@ -1574,7 +1572,7 @@ export default function ProjectDetailsPage() {
       {/* Context Menu for Project Icon */}
       <AnimatePresence>
         {showContextMenu && (
-          <div 
+          <div
             className="fixed z-50 bg-background border rounded-lg shadow-lg py-1 min-w-[140px]"
             style={{
               left: contextMenuPosition.x,

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Inter, Outfit } from 'next/font/google';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -6,6 +7,9 @@ import { ProfileProvider } from '@/context/profile-context';
 import { PinProvider } from '@/context/pin-context';
 import { AppLock } from '@/components/app-lock';
 import { ThemeProvider } from '@/components/theme-provider';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -19,15 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600&family=Merriweather:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={cn('font-body antialiased min-h-screen bg-background')}>
+      <body className={cn(
+        'min-h-screen bg-background font-sans antialiased',
+        inter.variable,
+        outfit.variable
+      )}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

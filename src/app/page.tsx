@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo, useContext, useRef, useCallback } from 'react';
+import React, { useState, useContext, useRef, useCallback } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,13 +10,12 @@ import { LearningTab } from '@/components/learning-tab';
 import type { Project, Link, Course } from './types';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { INITIAL_IDEAS, INITIAL_COMPLETED, INITIAL_LINKS, INITIAL_COURSES } from './data';
 import Papa from 'papaparse';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getLogoBlob, saveLogo } from '@/lib/logo-storage';
+import { useDataStore } from '@/hooks/use-data-store';
 
 // Helper to convert Blob to Base64 data URL
 const blobToDataURL = (blob: Blob): Promise<string> => {
@@ -44,17 +42,22 @@ const dataURLToBlob = (dataURL: string): Blob => {
 
 
 export default function Home() {
-  const [ideas, setIdeas, isIdeasLoaded] = useLocalStorage<Project[]>('projectflow-ideas', INITIAL_IDEAS);
-  const [completed, setCompleted, isCompletedLoaded] = useLocalStorage<Project[]>('projectflow-completed', INITIAL_COMPLETED);
-  const [links, setLinks, isLinksLoaded] = useLocalStorage<Link[]>('projectflow-links', INITIAL_LINKS);
-  const [courses, setCourses, isCoursesLoaded] = useLocalStorage<Course[]>('projectflow-courses', INITIAL_COURSES);
+  const {
+    ideas, completed, links, courses,
+    isLoading, actions, storageMode
+  } = useDataStore();
+
+  const {
+    setIdeas, setCompleted, setLinks, setCourses,
+    addProject, updateProject, deleteProject, moveProject,
+    addLink, updateLink, deleteLink: removeLink,
+    addCourse, updateCourse, deleteCourse: removeCourse
+  } = actions;
 
   const [searchTerm, setSearchTerm] = useState('');
   const { font, layout } = useContext(ProfileContext);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const isClient = isIdeasLoaded && isCompletedLoaded && isLinksLoaded && isCoursesLoaded;
 
   const downloadFile = useCallback((filename: string, content: string, mimeType: string) => {
     const element = document.createElement('a');
@@ -152,10 +155,10 @@ export default function Home() {
       try {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
-        
+
         if (data && typeof data === 'object' && ('ideas' in data || 'completed' in data)) {
           toast({ title: 'Importing data...', description: 'Please wait while we restore your workspace.' });
-          
+
           const processImportedItems = async <T extends Project | Course>(items: T[]): Promise<T[]> => {
             return Promise.all(
               items.map(async (item) => {
@@ -176,15 +179,23 @@ export default function Home() {
             );
           };
 
-          const importedIdeas = await processImportedItems(data.ideas || []);
-          const importedCompleted = await processImportedItems(data.completed || []);
-          const importedCourses = await processImportedItems(data.courses || []);
+          const importedIdeas = (await processImportedItems(data.ideas || [])) as Project[];
+          const importedCompleted = (await processImportedItems(data.completed || [])) as Project[];
+          const importedCourses = (await processImportedItems(data.courses || [])) as Course[];
 
-          setIdeas(importedIdeas);
-          setCompleted(importedCompleted);
-          setLinks(data.links || []);
-          setCourses(importedCourses);
-          
+          if (storageMode === 'local') {
+            setIdeas(importedIdeas);
+            setCompleted(importedCompleted);
+            setLinks(data.links || []);
+            setCourses(importedCourses);
+          } else {
+            toast({ title: "Importing to SQLite...", description: "This might take a moment." });
+            for (const p of importedIdeas) await addProject(p, 'idea');
+            for (const p of importedCompleted) await addProject(p, 'completed');
+            for (const l of data.links || []) await addLink(l);
+            for (const c of importedCourses) await addCourse(c);
+          }
+
           toast({ title: 'Import Successful', description: 'Your data has been restored.' });
         } else {
           throw new Error('Invalid backup file format.');
@@ -194,15 +205,15 @@ export default function Home() {
         toast({ variant: 'destructive', title: 'Import Failed', description: 'The selected file is not a valid backup file.' });
       } finally {
         if (event.target) {
-            event.target.value = '';
+          event.target.value = '';
         }
       }
     };
     reader.readAsText(file);
-  }, [setIdeas, setCompleted, setLinks, setCourses, toast]);
-  
-  if (!isClient) {
-    return null;
+  }, [setIdeas, setCompleted, setLinks, setCourses, toast, storageMode, addProject, addLink, addCourse]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
   return (
@@ -211,9 +222,9 @@ export default function Home() {
         <AppHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} onExport={handleExport} onImport={handleImportClick} />
         <input type="file" ref={importInputRef} className="hidden" accept="application/json" onChange={handleImport} />
 
-        <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-screen-2xl' : 'max-w-7xl' )}>
-          <DashboardStats 
-            ideasCount={ideas.length} 
+        <main className={cn("flex-1 container mx-auto py-8 px-4 md:px-6", layout === 'compact' ? 'max-w-screen-2xl' : 'max-w-7xl')}>
+          <DashboardStats
+            ideasCount={ideas.length}
             completedCount={completed.length}
             coursesCount={courses.length}
             completedCoursesCount={courses.filter(c => c.completed).length}
@@ -227,24 +238,24 @@ export default function Home() {
               <TabsTrigger value="learning">Learning</TabsTrigger>
             </TabsList>
             <TabsContent value="ideas">
-               <ProjectTab 
-                 ideas={ideas}
-                 setIdeas={setIdeas}
-                 completed={completed}
-                 setCompleted={setCompleted}
-                 isCompletedTab={false}
-                 searchTerm={searchTerm}
-               />
+              <ProjectTab
+                ideas={ideas}
+                setIdeas={setIdeas}
+                completed={completed}
+                setCompleted={setCompleted}
+                isCompletedTab={false}
+                searchTerm={searchTerm}
+              />
             </TabsContent>
             <TabsContent value="completed">
-                <ProjectTab 
-                 ideas={ideas}
-                 setIdeas={setIdeas}
-                 completed={completed}
-                 setCompleted={setCompleted}
-                 isCompletedTab={true}
-                 searchTerm={searchTerm}
-               />
+              <ProjectTab
+                ideas={ideas}
+                setIdeas={setIdeas}
+                completed={completed}
+                setCompleted={setCompleted}
+                isCompletedTab={true}
+                searchTerm={searchTerm}
+              />
             </TabsContent>
             <TabsContent value="links">
               <LinkTab links={links} setLinks={setLinks} searchTerm={searchTerm} />
@@ -258,5 +269,3 @@ export default function Home() {
     </DndProvider>
   );
 }
-
-    

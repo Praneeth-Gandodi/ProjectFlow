@@ -15,11 +15,12 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Download, Upload, Edit, Github, Layout, Lock, Pilcrow, User } from 'lucide-react';
+import { Download, Upload, Edit, Github, Layout, Lock, Pilcrow, User, Palette } from 'lucide-react';
 import { useContext, useState } from 'react';
 import { ProfileContext } from '@/context/profile-context';
 import { ProfileDialog } from './profile-dialog';
 import { PinContext } from '@/context/pin-context';
+import { ThemeSelector } from './theme-selector';
 
 interface ProfileMenuProps {
   onExport: (format: 'json' | 'csv-projects' | 'csv-links' | 'csv-courses') => void;
@@ -30,6 +31,7 @@ export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
   const { name, avatar, github, font, setFont, layout, setLayout } = useContext(ProfileContext);
   const { lockApp, userPin } = useContext(PinContext);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
 
   return (
     <>
@@ -86,6 +88,13 @@ export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
               </DropdownMenuItem>
             )}
 
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={() => setIsThemeSelectorOpen(true)}>
+              <Palette className="mr-2 h-4 w-4" />
+              <span>Themes</span>
+            </DropdownMenuItem>
+
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Download className="mr-2 h-4 w-4" />
@@ -99,7 +108,7 @@ export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
                 <DropdownMenuItem onClick={() => onExport('csv-links')}>
                   Links (CSV)
                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => onExport('csv-courses')}>
+                <DropdownMenuItem onClick={() => onExport('csv-courses')}>
                   Courses (CSV)
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -148,6 +157,7 @@ export function ProfileMenu({ onExport, onImport }: ProfileMenuProps) {
       </DropdownMenu>
 
       <ProfileDialog isOpen={isProfileDialogOpen} setIsOpen={setIsProfileDialogOpen} />
+      <ThemeSelector open={isThemeSelectorOpen} onOpenChange={setIsThemeSelectorOpen} />
     </>
   );
 }

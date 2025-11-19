@@ -18,14 +18,13 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import type { Course, Note, Link as LinkType } from '@/app/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useDataStore } from '@/hooks/use-data-store';
 import { ProfileContext } from '@/context/profile-context';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { INITIAL_COURSES } from '@/app/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TechLogo } from '@/components/tech-logo';
@@ -38,8 +37,9 @@ export default function CourseDetailsPage() {
 
   const { toast } = useToast();
 
-  const [courses, setCourses, isCoursesLoaded] = useLocalStorage<Course[]>('projectflow-courses', INITIAL_COURSES);
-  
+  const { courses, isLoading, actions } = useDataStore();
+  const { updateCourse } = actions;
+
   const [course, setCourse] = useState<Course | null>(null);
 
   // Editing state
@@ -62,12 +62,12 @@ export default function CourseDetailsPage() {
       return false;
     }
   };
-  
+
   useEffect(() => {
-    if (!id || !isCoursesLoaded) return;
+    if (!id || isLoading) return;
     const foundCourse = courses.find(c => c.id === id) || null;
     setCourse(foundCourse);
-  }, [id, courses, isCoursesLoaded]);
+  }, [id, courses, isLoading]);
 
   useEffect(() => {
     if (course) {
@@ -78,16 +78,16 @@ export default function CourseDetailsPage() {
 
   const persistCourse = (updatedCourse: Course) => {
     if (!updatedCourse) return;
-    setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
-    setCourse(updatedCourse); // Keep local component state in sync
+    updateCourse(updatedCourse);
+    setCourse(updatedCourse);
   };
-  
+
   const handleSaveReason = () => {
     if (!course) return;
     const updatedCourse = { ...course, reason: editReason };
     persistCourse(updatedCourse);
     toast({ title: 'Reason Saved', description: 'Your motivation has been updated.' });
-  }
+  };
 
   // --- Link Handlers ---
   const persistLinksQuick = (linksArr: LinkType[]) => {
@@ -102,13 +102,13 @@ export default function CourseDetailsPage() {
     persistLinksQuick(updatedLinks);
     toast({ title: 'Link Added!' });
   };
-  
+
   const handleUpdateLink = (updatedLink: LinkType) => {
     const updatedLinks = editLinks.map(l => l.id === updatedLink.id ? updatedLink : l);
     persistLinksQuick(updatedLinks);
     toast({ title: 'Link Updated!' });
   };
-  
+
   const handleDeleteLink = (linkId: string) => {
     const updatedLinks = editLinks.filter(l => l.id !== linkId);
     persistLinksQuick(updatedLinks);
@@ -118,18 +118,18 @@ export default function CourseDetailsPage() {
   // --- Note Handlers ---
   const handleAddNote = () => {
     if (!course || !newNote.trim()) return;
-    const note: Note = { 
-      id: `note-${Date.now()}`, 
-      date: new Date().toISOString(), 
-      content: newNote.trim() 
+    const note: Note = {
+      id: `note-${Date.now()}`,
+      date: new Date().toISOString(),
+      content: newNote.trim()
     };
 
     const updatedCourse = { ...course, notes: [...(course.notes || []), note] };
     persistCourse(updatedCourse);
 
     setNewNote('');
-    toast({ 
-      title: 'Note added!', 
+    toast({
+      title: 'Note added!',
       description: 'Your note has been saved to the course log.',
     });
   };
@@ -142,11 +142,10 @@ export default function CourseDetailsPage() {
     toast({ title: 'Note deleted' });
   };
 
-  // Loading skeleton
-  if (!isCoursesLoaded) {
+  if (isLoading) {
     return (
       <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
-        <AppHeader searchTerm="" setSearchTerm={() => {}} onExport={() => {}} onImport={() => {}} />
+        <AppHeader searchTerm="" setSearchTerm={() => { }} onExport={() => { }} onImport={() => { }} />
         <main className="flex-1 w-full min-h-screen py-8 px-4 sm:px-6 md:px-8 lg:px-12">
           <div className="max-w-7xl mx-auto">
             <Skeleton className="h-8 w-48 mb-6" />
@@ -176,14 +175,14 @@ export default function CourseDetailsPage() {
 
   return (
     <div className={cn('flex flex-col min-h-screen', font === 'serif' ? 'font-serif' : 'font-sans')}>
-      <AppHeader searchTerm="" setSearchTerm={() => {}} onExport={() => {}} onImport={() => {}} />
+      <AppHeader searchTerm="" setSearchTerm={() => { }} onExport={() => { }} onImport={() => { }} />
 
       <main className="flex-1 w-full min-h-screen py-6 px-4 sm:px-6 md:px-8 lg:px-12">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <Button variant="ghost" onClick={() => router.push('/')} className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> 
+              <ArrowLeft className="h-4 w-4" />
               Back to Dashboard
             </Button>
           </div>
@@ -199,8 +198,8 @@ export default function CourseDetailsPage() {
                   <h1 className="text-3xl font-bold text-center">{course.name}</h1>
                 </CardContent>
               </Card>
-              
-               <Card>
+
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Lightbulb className="h-5 w-5" />
@@ -242,7 +241,7 @@ export default function CourseDetailsPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
                       >
-                         <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-1 min-w-0">
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
                             {validateUrl(link.url) ? (
                               <img src={`https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`} alt="" className="w-5 h-5" />
@@ -302,7 +301,7 @@ export default function CourseDetailsPage() {
                   <div className="space-y-4">
                     {(course.notes ?? []).length > 0 ? (
                       [...course.notes].slice().reverse().map((note) => (
-                         <motion.div
+                        <motion.div
                           key={note.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}

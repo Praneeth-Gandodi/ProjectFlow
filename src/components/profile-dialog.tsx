@@ -22,6 +22,7 @@ import { ProfileContext } from '@/context/profile-context';
 import { PinContext } from '@/context/pin-context';
 import { Separator } from './ui/separator';
 import { Label } from './ui/label';
+import { Switch } from '@/components/ui/switch';
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ type ProfileFormData = z.infer<typeof formSchema>;
 export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { name, avatar, github, setName, setAvatar, setGithub } = useContext(ProfileContext);
+  const { name, avatar, github, setName, setAvatar, setGithub, storageMode, setStorageMode } = useContext(ProfileContext);
   const { userPin, setUserPin } = useContext(PinContext);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(avatar);
   const [pinInputValue, setPinInputValue] = useState('');
@@ -52,7 +53,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
       github: github || '',
     },
   });
-  
+
   useEffect(() => {
     if (isOpen) {
       form.reset({ name, avatar: avatar || '', github: github || '' });
@@ -78,7 +79,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const onSubmit = (values: ProfileFormData) => {
     setName(values.name);
     setAvatar(values.avatar || null);
@@ -86,7 +87,7 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
     toast({ title: 'Profile updated!' });
     setIsOpen(false);
   };
-  
+
   const handlePinChange = () => {
     if (pinInputValue.length !== 6 || !/^\d+$/.test(pinInputValue)) {
       toast({ variant: 'destructive', title: 'Invalid PIN', description: 'PIN must be exactly 6 digits.' });
@@ -114,9 +115,9 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-             <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
               {avatarPreview && (
-                <Image src={avatarPreview} alt="Avatar preview" width={80} height={80} className="rounded-full border object-cover"/>
+                <Image src={avatarPreview} alt="Avatar preview" width={80} height={80} className="rounded-full border object-cover" />
               )}
               <div className="flex-1 space-y-2">
                 <FormLabel>Avatar</FormLabel>
@@ -124,9 +125,9 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
                   <Button type="button" variant="outline" onClick={handleAvatarUploadClick}>
                     <Upload className="mr-2 h-4 w-4" /> Upload
                   </Button>
-                  <Input 
+                  <Input
                     ref={fileInputRef}
-                    type="file" 
+                    type="file"
                     className="hidden"
                     accept="image/*"
                     onChange={handleFileChange}
@@ -173,37 +174,61 @@ export function ProfileDialog({ isOpen, setIsOpen }: ProfileDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-               <Button type="submit">Save Profile</Button>
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Profile</Button>
             </DialogFooter>
           </form>
         </Form>
         <Separator />
+
+
         <div className="space-y-4 pt-2">
-            <h3 className="font-medium flex items-center gap-2"><KeyRound size={16} /> Security PIN</h3>
-            <div className="space-y-2">
-                <Label htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set a New PIN'}</Label>
-                <div className="flex gap-2">
-                    <Input 
-                        id="pin-input"
-                        type="password"
-                        maxLength={6}
-                        value={pinInputValue}
-                        onChange={(e) => setPinInputValue(e.target.value.replace(/\D/g, ''))}
-                        placeholder="6-digit PIN"
-                    />
-                    <Button type="button" onClick={handlePinChange}>{userPin ? 'Change' : 'Set'}</Button>
-                </div>
+          <h3 className="font-medium flex items-center gap-2">Storage Settings</h3>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="storage-mode">Use Local Database (SQLite)</Label>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${storageMode === 'local' ? 'font-bold' : 'text-muted-foreground'}`}>Browser</span>
+              <Switch
+                id="storage-mode"
+                checked={storageMode === 'sqlite'}
+                onCheckedChange={(checked) => {
+                  setStorageMode(checked ? 'sqlite' : 'local');
+                  toast({ title: `Switched to ${checked ? 'SQLite' : 'Browser'} Storage`, description: 'Your view has been updated.' });
+                }}
+              />
+              <span className={`text-xs ${storageMode === 'sqlite' ? 'font-bold' : 'text-muted-foreground'}`}>SQLite</span>
             </div>
-            {userPin && (
-                <Button type="button" variant="destructive" onClick={handleRemovePin} className="w-full">
-                    Remove PIN Protection
-                </Button>
-            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Switching storage modes will change where your data is saved. Data is not automatically synced between modes.
+          </p>
+        </div>
+        <Separator />
+        <div className="space-y-4 pt-2">
+          <h3 className="font-medium flex items-center gap-2"><KeyRound size={16} /> Security PIN</h3>
+          <div className="space-y-2">
+            <Label htmlFor="pin-input">{userPin ? 'Change PIN' : 'Set a New PIN'}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="pin-input"
+                type="password"
+                maxLength={6}
+                value={pinInputValue}
+                onChange={(e) => setPinInputValue(e.target.value.replace(/\D/g, ''))}
+                placeholder="6-digit PIN"
+              />
+              <Button type="button" onClick={handlePinChange}>{userPin ? 'Change' : 'Set'}</Button>
+            </div>
+          </div>
+          {userPin && (
+            <Button type="button" variant="destructive" onClick={handleRemovePin} className="w-full">
+              Remove PIN Protection
+            </Button>
+          )}
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }
